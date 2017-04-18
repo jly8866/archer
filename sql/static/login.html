@@ -18,16 +18,17 @@
 				<div class="login-div-center">
 					<form class="form-horizontal login-form" role="form">
 						{% csrf_token %}
+						<h2 class="form-signin-heading" style="text-align: center;">审核平台登录</h2>
 						<div class="form-group">
 							 <label for="inputUsername" class="col-sm-2 control-label">用户名:</label>
 							<div class="col-sm-10">
-								<input type="text" class="form-control" id="inputUsername" name="username" required />
+								<input type="text" class="form-control" id="inputUsername" name="username" placeholder="请输入用户名" required />
 							</div>
 						</div>
 						<div class="form-group">
 							 <label for="inputPassword" class="col-sm-2 control-label">密码:</label>
 							<div class="col-sm-10">
-								<input type="password" class="form-control" id="inputPassword" name="password" required />
+								<input type="password" class="form-control" id="inputPassword" name="password" placeholder="请输入密码" required />
 							</div>
 						</div>
 						<hr/>
