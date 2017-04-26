@@ -252,7 +252,7 @@ def execute(request):
     workflowDetail.status = finalStatus
     workflowDetail.save()
 
-    #如果执行完毕了，则根据settings.py里的配置决定是否给提交者和DBA一封邮件提醒.DBA需要知晓审核并执行过的单子
+ #如果执行完毕了，则根据settings.py里的配置决定是否给提交者和DBA一封邮件提醒.DBA需要知晓审核并执行过的单子
     if hasattr(settings, 'MAIL_ON_OFF') == True:
         if getattr(settings, 'MAIL_ON_OFF') == "on":
             url = _getDetailUrl(request) + str(workflowId) + '/'
@@ -264,10 +264,16 @@ def execute(request):
             workflowName = workflowDetail.workflow_name
             objEngineer = users.objects.get(username=engineer)
             objReviewMan = users.objects.get(username=reviewMan)
-            strTitle = "SQL上线工单执行完毕"
-            strContent = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus
-            mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
-            mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
+            strTitle_succ = "SQL上线工单执行成功"
+            strTitle_fail = "SQL上线工单执行异常"
+            strContent_succ = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus
+            strContent_fail = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus +"\n提醒：工单执行异常，联系DBA处理"
+            if workflowStatus =="已正常结束":
+                    mailSender.sendEmail(strTitle_succ, strContent_succ, [objEngineer.email])
+                    mailSender.sendEmail(strTitle_succ, strContent_succ, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
+            elif workflowStatus == "执行有异常":
+                    mailSender.sendEmail(strTitle_fail, strContent_fail, [objEngineer.email])
+                    mailSender.sendEmail(strTitle_fail, strContent_fail, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
         else:
             #不发邮件
             pass
