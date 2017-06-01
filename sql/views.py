@@ -80,7 +80,7 @@ def allworkflow(request):
     elif navStatus == 'all' and role == '工程师':
         listWorkflow = workflow.objects.filter(Q(engineer=loginUser) | Q(status=Const.workflowStatus['autoreviewwrong']), engineer=loginUser).order_by('-create_time')[offset:limit]
     elif navStatus == 'waitingforme':
-        listWorkflow = workflow.objects.filter(status=Const.workflowStatus['manreviewing'], review_man=loginUser).order_by('-create_time')[offset:limit]
+        listWorkflow = workflow.objects.filter(status=Const.workflowStatus['manreviewing'], review_man__contains=loginUser).order_by('-create_time')[offset:limit]
     elif navStatus == 'finish' and role == '审核人':
         listWorkflow = workflow.objects.filter(status=Const.workflowStatus['finish']).order_by('-create_time')[offset:limit]
     elif navStatus == 'finish' and role == '工程师':
@@ -134,13 +134,15 @@ def submitSql(request):
     #获取所有审核人，当前登录用户不可以审核
     loginUser = request.session.get('login_username', False)
     reviewMen = users.objects.filter(role='审核人').exclude(username=loginUser)
-    subReviewMen = users.objects.filter(role='副审核人').exclude(username=loginUser)
-    if len(reviewMen) == 0 and len(subReviewMen) == 0:
-       context = {'errMsg': '审核人为0，请配置审核人或副审核人'}
+    #reviewMen = users.objects.values_list('username').filter(role='审核人').exclude(username=loginUser)
+    #reviewMen = [user[0] for user in reviewMen]
+    #subReviewMen = users.objects.filter(role='副审核人').exclude(username=loginUser)
+    if len(reviewMen) == 0:
+       context = {'errMsg': '审核人为0，请配置审核人'}
        return render(request, 'error.html', context) 
     #listAllReviewMen = [user.username for user in reviewMen]
   
-    context = {'currentMenu':'submitsql', 'dictAllClusterDb':dictAllClusterDb, 'reviewMen':reviewMen, 'subReviewMen':subReviewMen}
+    context = {'currentMenu':'submitsql', 'dictAllClusterDb':dictAllClusterDb, 'reviewMen':reviewMen}
     return render(request, 'submitSql.html', context)
 
 #提交SQL给inception进行解析
@@ -150,6 +152,8 @@ def autoreview(request):
     clusterName = request.POST['cluster_name']
     isBackup = request.POST['is_backup']
     reviewMan = request.POST['review_man']
+    subReviewMen = request.POST.get('sub_review_man', '')
+    listAllReviewMen = (reviewMan, subReviewMen)
    
     #服务器端参数验证
     if sqlContent is None or workflowName is None or clusterName is None or isBackup is None or reviewMan is None:
@@ -184,7 +188,7 @@ def autoreview(request):
     newWorkflow = workflow()
     newWorkflow.workflow_name = workflowName
     newWorkflow.engineer = engineer
-    newWorkflow.review_man = reviewMan
+    newWorkflow.review_man = json.dumps(listAllReviewMen)
     newWorkflow.create_time = getNow()
     newWorkflow.status = workflowStatus
     newWorkflow.is_backup = isBackup
@@ -221,7 +225,8 @@ def detail(request, workflowId):
         listContent = json.loads(workflowDetail.execute_result)
     else:
         listContent = json.loads(workflowDetail.review_content)
-    context = {'currentMenu':'allworkflow', 'workflowDetail':workflowDetail, 'listContent':listContent}
+    listAllReviewMen = json.loads(workflowDetail.review_man)
+    context = {'currentMenu':'allworkflow', 'workflowDetail':workflowDetail, 'listContent':listContent, 'listAllReviewMen':listAllReviewMen}
     return render(request, 'detail.html', context)
 
 #人工审核也通过，执行SQL
@@ -237,7 +242,8 @@ def execute(request):
 
     #服务器端二次验证，正在执行人工审核动作的当前登录用户必须为审核人. 避免攻击或被接口测试工具强行绕过
     loginUser = request.session.get('login_username', False)
-    if loginUser is None or loginUser != workflowDetail.review_man:
+    print(workflowDetail.review_man)
+    if loginUser is None or loginUser not in json.loads(workflowDetail.review_man):
         context = {'errMsg': '当前登录用户不是审核人，请重新登录.'}
         return render(request, 'error.html', context)
 
@@ -270,11 +276,11 @@ def execute(request):
 
             #发一封邮件
             engineer = workflowDetail.engineer
-            reviewMan = workflowDetail.review_man
+            reviewMan = json.loads(workflowDetail.review_man)
             workflowStatus = workflowDetail.status
             workflowName = workflowDetail.workflow_name
             objEngineer = users.objects.get(username=engineer)
-            objReviewMan = users.objects.get(username=reviewMan)
+            objReviewMan = users.objects.filter(username=reviewMan)
             strTitle = "SQL上线工单执行完毕 # " + str(workflowId)
             strContent = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus
             mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
