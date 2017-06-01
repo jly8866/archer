@@ -207,10 +207,13 @@ def autoreview(request):
 
                 #发一封邮件
                 strTitle = "新的SQL上线工单提醒 # " + str(workflowId)
-                strContent = "发起人：" + engineer + "\n审核人：" + reviewMan  + "\n工单地址：" + url + "\n工单名称： " + workflowName + "\n具体SQL：" + sqlContent
                 objEngineer = users.objects.get(username=engineer)
-                objReviewMan = users.objects.get(username=reviewMan)
-                mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
+                for reviewMan in listAllReviewMen:
+                    if reviewMan == "":
+                        continue
+                    strContent = "发起人：" + engineer + "\n审核人：" + reviewMan  + "\n工单地址：" + url + "\n工单名称： " + workflowName + "\n具体SQL：" + sqlContent
+                    objReviewMan = users.objects.get(username=reviewMan)
+                    mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
             else:
                 #不发邮件
                 pass
@@ -276,15 +279,15 @@ def execute(request):
 
             #发一封邮件
             engineer = workflowDetail.engineer
-            reviewMans = json.loads(workflowDetail.review_man)
+            listAllReviewMen = json.loads(workflowDetail.review_man)
             workflowStatus = workflowDetail.status
             workflowName = workflowDetail.workflow_name
             objEngineer = users.objects.get(username=engineer)
-            for reviewMan in reviewMans:
+            strTitle = "SQL上线工单执行完毕 # " + str(workflowId)
+            for reviewMan in listAllReviewMen:
                 if reviewMan == "":
                     continue
                 objReviewMan = users.objects.filter(username=reviewMan)
-                strTitle = "SQL上线工单执行完毕 # " + str(workflowId)
                 strContent = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus
                 mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
                 mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
