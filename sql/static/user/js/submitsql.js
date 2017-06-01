@@ -26,3 +26,6 @@ $("#btn-submitsql").click(function (){
 		formSubmit.submit();
 	}
 });
+
+//增加副审核人(可选)
+$(function () { $('#collapseOne').collapse('hide')});
