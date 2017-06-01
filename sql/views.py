@@ -134,12 +134,13 @@ def submitSql(request):
     #获取所有审核人，当前登录用户不可以审核
     loginUser = request.session.get('login_username', False)
     reviewMen = users.objects.filter(role='审核人').exclude(username=loginUser)
-    if len(reviewMen) == 0:
-       context = {'errMsg': '审核人为0，请配置审核人'}
+    subReviewMen = users.objects.filter(role='副审核人').exclude(username=loginUser)
+    if len(reviewMen) == 0 and len(subReviewMen) == 0:
+       context = {'errMsg': '审核人为0，请配置审核人或副审核人'}
        return render(request, 'error.html', context) 
-    listAllReviewMen = [user.username for user in reviewMen]
+    #listAllReviewMen = [user.username for user in reviewMen]
   
-    context = {'currentMenu':'submitsql', 'dictAllClusterDb':dictAllClusterDb, 'reviewMen':reviewMen}
+    context = {'currentMenu':'submitsql', 'dictAllClusterDb':dictAllClusterDb, 'reviewMen':reviewMen, 'subReviewMen':subReviewMen}
     return render(request, 'submitSql.html', context)
 
 #提交SQL给inception进行解析
