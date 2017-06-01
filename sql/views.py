@@ -245,7 +245,6 @@ def execute(request):
 
     #服务器端二次验证，正在执行人工审核动作的当前登录用户必须为审核人. 避免攻击或被接口测试工具强行绕过
     loginUser = request.session.get('login_username', False)
-    print(workflowDetail.review_man)
     if loginUser is None or loginUser not in json.loads(workflowDetail.review_man):
         context = {'errMsg': '当前登录用户不是审核人，请重新登录.'}
         return render(request, 'error.html', context)
@@ -279,18 +278,15 @@ def execute(request):
 
             #发一封邮件
             engineer = workflowDetail.engineer
-            listAllReviewMen = json.loads(workflowDetail.review_man)
+            reviewMan = workflowDetail.review_man
             workflowStatus = workflowDetail.status
             workflowName = workflowDetail.workflow_name
             objEngineer = users.objects.get(username=engineer)
             strTitle = "SQL上线工单执行完毕 # " + str(workflowId)
-            for reviewMan in listAllReviewMen:
-                if reviewMan == "":
-                    continue
-                objReviewMan = users.objects.filter(username=reviewMan)
-                strContent = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus
-                mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
-                mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
+            #objReviewMan = users.objects.filter(username=reviewMan)
+            strContent = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus
+            mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
+            mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
         else:
             #不发邮件
             pass
@@ -309,7 +305,7 @@ def cancel(request):
 
     #服务器端二次验证，如果正在执行终止动作的当前登录用户，不是发起人也不是审核人，则异常.
     loginUser = request.session.get('login_username', False)
-    if loginUser is None or (loginUser != workflowDetail.review_man and loginUser != workflowDetail.engineer):
+    if loginUser is None or (loginUser not in json.loads(workflowDetail.review_man) and loginUser != workflowDetail.engineer):
         context = {'errMsg': '当前登录用户不是审核人也不是发起人，请重新登录.'}
         return render(request, 'error.html', context)
 
