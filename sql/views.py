@@ -276,15 +276,18 @@ def execute(request):
 
             #发一封邮件
             engineer = workflowDetail.engineer
-            reviewMan = json.loads(workflowDetail.review_man)
+            reviewMans = json.loads(workflowDetail.review_man)
             workflowStatus = workflowDetail.status
             workflowName = workflowDetail.workflow_name
             objEngineer = users.objects.get(username=engineer)
-            objReviewMan = users.objects.filter(username=reviewMan)
-            strTitle = "SQL上线工单执行完毕 # " + str(workflowId)
-            strContent = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus
-            mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
-            mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
+            for reviewMan in reviewMans:
+                if reviewMan == "":
+                    continue
+                objReviewMan = users.objects.filter(username=reviewMan)
+                strTitle = "SQL上线工单执行完毕 # " + str(workflowId)
+                strContent = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus
+                mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
+                mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
         else:
             #不发邮件
             pass
