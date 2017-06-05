@@ -26,3 +26,13 @@ $("#btn-submitsql").click(function (){
 		formSubmit.submit();
 	}
 });
+
+
+$("#review_man").change(function review_man(){
+    var review_man = $(this).val();
+    $("div#" + review_man).hide();
+});
+
+
+//增加副审核人(可选)
+$(function () { $('#collapseOne').collapse('hide')});
