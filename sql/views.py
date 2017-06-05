@@ -328,7 +328,7 @@ def cancel(request):
             workflowStatus = workflowDetail.status
             workflowName = workflowDetail.workflow_name
             objEngineer = users.objects.get(username=engineer)
-            objReviewMan = users.objects.get(username=reviewMan)
+            #objReviewMan = users.objects.get(username=reviewMan)
             strTitle = "SQL上线工单被拒绝执行 # " + str(workflowId)
             strContent = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus +"\n提醒：此工单被拒绝执行，请登陆重新提交"
             mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
