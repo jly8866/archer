@@ -30,9 +30,8 @@ $("#btn-submitsql").click(function (){
 
 $("#review_man").change(function review_man(){
     var review_man = $(this).val();
-    $("#" + review_man).hide();
+    $("div#" + review_man).hide();
 });
-
 
 
 //增加副审核人(可选)
