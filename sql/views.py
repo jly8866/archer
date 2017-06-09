@@ -228,7 +228,10 @@ def detail(request, workflowId):
         listContent = json.loads(workflowDetail.execute_result)
     else:
         listContent = json.loads(workflowDetail.review_content)
-    listAllReviewMen = json.loads(workflowDetail.review_man)
+    try:
+        listAllReviewMen = json.loads(workflowDetail.review_man)
+    except ValueError:
+        listAllReviewMen = [workflowDetail.review_man]
     context = {'currentMenu':'allworkflow', 'workflowDetail':workflowDetail, 'listContent':listContent, 'listAllReviewMen':listAllReviewMen}
     return render(request, 'detail.html', context)
 
@@ -245,7 +248,12 @@ def execute(request):
 
     #服务器端二次验证，正在执行人工审核动作的当前登录用户必须为审核人. 避免攻击或被接口测试工具强行绕过
     loginUser = request.session.get('login_username', False)
-    if loginUser is None or loginUser not in json.loads(workflowDetail.review_man):
+    try:
+        listAllReviewMen = json.loads(workflowDetail.review_man)
+    except ValueError:
+        listAllReviewMen = [workflowDetail.review_man]
+
+    if loginUser is None or loginUser not in listAllReviewMen:
         context = {'errMsg': '当前登录用户不是审核人，请重新登录.'}
         return render(request, 'error.html', context)
 
@@ -305,7 +313,11 @@ def cancel(request):
 
     #服务器端二次验证，如果正在执行终止动作的当前登录用户，不是发起人也不是审核人，则异常.
     loginUser = request.session.get('login_username', False)
-    if loginUser is None or (loginUser not in json.loads(workflowDetail.review_man) and loginUser != workflowDetail.engineer):
+    try:
+        listAllReviewMen = json.loads(workflowDetail.review_man)
+    except ValueError:
+        listAllReviewMen = [workflowDetail.review_man]
+    if loginUser is None or (loginUser not in listAllReviewMen and loginUser != workflowDetail.engineer):
         context = {'errMsg': '当前登录用户不是审核人也不是发起人，请重新登录.'}
         return render(request, 'error.html', context)
 
