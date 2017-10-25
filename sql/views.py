@@ -131,7 +131,7 @@ def submitSql(request):
         listDb = dao.getAlldbByCluster(masterHost, masterPort, masterUser, masterPassword)
         dictAllClusterDb[clusterName] = listDb
 
-    #获取所有审核人，当前登录用户不可以审核
+    #获取所有审核人，当前登2录用户不可以审核
     loginUser = request.session.get('login_username', False)
     reviewMen = users.objects.filter(role='审核人').exclude(username=loginUser)
     if len(reviewMen) == 0:
