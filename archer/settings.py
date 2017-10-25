@@ -41,10 +41,11 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'sql',
+    'sql'
 )
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE_CLASSES = [
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -52,9 +53,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
     'sql.check_login_middleware.CheckLoginMiddleware',
-)
+]
 
 ROOT_URLCONF = 'archer.urls'
 
@@ -74,6 +74,8 @@ TEMPLATES = [
         },
     },
 ]
+
+
 
 WSGI_APPLICATION = 'archer.wsgi.application'
 
@@ -110,32 +112,32 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'archer',
-        'USER': 'archer_rw',
-        'PASSWORD': 'archer_rw',
-        'HOST': '127.0.0.1',
-        'PORT': '5000'
+        'USER': 'root',
+        'PASSWORD': '123456',
+        'HOST': '192.168.134.130',
+        'PORT': '3307'
     }
 }
 
 #inception组件所在的地址
-INCEPTION_HOST = '192.168.1.11'
-INCEPTION_PORT = '6100'
+INCEPTION_HOST = '192.168.134.130'
+INCEPTION_PORT = '6669'
 
 #查看回滚SQL时候会用到，这里要告诉archer去哪个mysql里读取inception备份的回滚信息和SQL.
 #注意这里要和inception组件的inception.conf里的inception_remote_XX部分保持一致.
-INCEPTION_REMOTE_BACKUP_HOST='192.168.1.12'
-INCEPTION_REMOTE_BACKUP_PORT=5621
-INCEPTION_REMOTE_BACKUP_USER='inception'
-INCEPTION_REMOTE_BACKUP_PASSWORD='inception'
+INCEPTION_REMOTE_BACKUP_HOST='192.168.134.130'
+INCEPTION_REMOTE_BACKUP_PORT=3307
+INCEPTION_REMOTE_BACKUP_USER='root'
+INCEPTION_REMOTE_BACKUP_PASSWORD='123456'
 
 #是否开启邮件提醒功能：发起SQL上线后会发送邮件提醒审核人审核，执行完毕会发送给DBA. on是开，off是关，配置为其他值均会被archer认为不开启邮件功能
 MAIL_ON_OFF='on'
 
-MAIL_REVIEW_SMTP_SERVER='mail.xxx.com'
+MAIL_REVIEW_SMTP_SERVER='smtp.163.com'
 MAIL_REVIEW_SMTP_PORT=25
-MAIL_REVIEW_FROM_ADDR='archer@xxx.com'                                               #发件人，也是登录SMTP server需要提供的用户名
-MAIL_REVIEW_FROM_PASSWORD=''                                                         #发件人邮箱密码，如果为空则不需要login SMTP server
-MAIL_REVIEW_DBA_ADDR=['zhangsan@abc.com', 'lisi01@abc.com']        #DBA地址，执行完毕会发邮件给DBA，以list形式保存
+MAIL_REVIEW_FROM_ADDR='ljd8210@163.com'                                               #发件人，也是登录SMTP server需要提供的用户名
+MAIL_REVIEW_FROM_PASSWORD='2528107752'                                                         #发件人邮箱密码，如果为空则不需要login SMTP server
+MAIL_REVIEW_DBA_ADDR=['lijd@iccgame.com', 'ljd821208@163.com']        #DBA地址，执行完毕会发邮件给DBA，以list形式保存
 #是否过滤【DROP DATABASE】|【DROP TABLE】|【TRUNCATE PARTITION】|【TRUNCATE TABLE】等高危DDL操作：
 #on是开，会首先用正则表达式匹配sqlContent，如果匹配到高危DDL操作，则判断为“自动审核不通过”；off是关，直接将所有的SQL语句提交给inception，对于上述高危DDL操作，只备份元数据
 CRITICAL_DDL_ON_OFF='off'

@@ -160,6 +160,8 @@
 				{% csrf_token %}
 				<input type="hidden" name="workflowid" value="{{workflowDetail.id}}">
 				<input type="submit" id="btnCancel" type="button" onclick="execute()" class="btn btn-default" data-loading-text="Loading..." value="终止流程" />
+                <input type="submit" id="reback"  onclick="execute()" class="btn btn-default" data-loading-text="Loading..." value="返回" />
+
 			</form>
 			{% elif workflowDetail.status == '已正常结束' and workflowDetail.is_backup == '是' %}
 			<form action="/rollback/" method="get" style="display:inline-block;">
