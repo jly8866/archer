@@ -92,7 +92,9 @@ def command_line_args(args):
     return args
 
 
-def compare_items((k, v)):
+def compare_items(where_key):
+    v = where_key[1]
+    k = where_key[0]
     #caution: if v is NULL, may need to process
     if v is None:
         return '`%s` IS %%s' % k
@@ -100,11 +102,11 @@ def compare_items((k, v)):
     else:
 
         return '`%s`=%%s' % k
-# </editor-fold>
+# </editor-fold>fsa
 
 def fix_object(value):
     """Fixes python objects so that they can be properly inserted into SQL queries"""
-    if isinstance(value, unicode):
+    if isinstance(value, str):
         return value.encode('utf-8')
     else:
         return value
@@ -119,7 +121,7 @@ def concat_sql_from_binlogevent(cursor, binlogevent, row=None, eStartPos=None, f
     sql = ''
     if isinstance(binlogevent, WriteRowsEvent) or isinstance(binlogevent, UpdateRowsEvent) or isinstance(binlogevent, DeleteRowsEvent):
         pattern = generate_sql_pattern(binlogevent, row=row, flashback=flashback, nopk=nopk)
-        sql = cursor.mogrify(pattern['template'], pattern['values'])
+        sql = cursor.mogrify(pattern['template'], list(pattern['values']))
         sql += ' #start %s end %s time %s' % (eStartPos, binlogevent.packet.log_pos, datetime.datetime.fromtimestamp(binlogevent.timestamp))
     elif flashback is False and isinstance(binlogevent, QueryEvent) and binlogevent.query != 'BEGIN' and binlogevent.query != 'COMMIT':
         if binlogevent.schema:
@@ -179,7 +181,7 @@ def generate_sql_pattern(binlogevent, row=None, flashback=False, nopk=False):
                 ', '.join(['`%s`=%%s'%k for k in row['after_values'].keys()]),
                 ' AND '.join(map(compare_items, row['before_values'].items()))
             )
-            values = map(fix_object, row['after_values'].values()+row['before_values'].values())
+            values = map(fix_object, list(row['after_values'].values())+list(row['before_values'].values()))
 
     return {'template':template, 'values':values}
 

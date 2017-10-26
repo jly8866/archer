@@ -10,7 +10,7 @@ from pymysqlreplication.row_event import (
     DeleteRowsEvent,
 )
 from pymysqlreplication.event import QueryEvent, RotateEvent, FormatDescriptionEvent
-from binlog2sql_util import command_line_args, concat_sql_from_binlogevent, create_unique_file, reversed_lines
+from binlog2sql_util import  command_line_args, concat_sql_from_binlogevent, create_unique_file, reversed_lines
 
 class Binlog2sql(object):
 
@@ -54,6 +54,8 @@ class Binlog2sql(object):
             if not self.serverId:
                 raise ValueError('need set server_id in mysql server %s:%s' % (self.connectionSettings['host'], self.connectionSettings['port']))
         finally:
+
+
             cur.close()
 
     def process_binlog(self):
@@ -86,14 +88,14 @@ class Binlog2sql(object):
                 if isinstance(binlogevent, QueryEvent):
                     sql = concat_sql_from_binlogevent(cursor=cur, binlogevent=binlogevent, flashback=self.flashback, nopk=self.nopk)
                     if sql:
-                        print sql
+                        print (sql)
                 elif isinstance(binlogevent, WriteRowsEvent) or isinstance(binlogevent, UpdateRowsEvent) or isinstance(binlogevent, DeleteRowsEvent):
                     for row in binlogevent.rows:
                         sql = concat_sql_from_binlogevent(cursor=cur, binlogevent=binlogevent, row=row , flashback=self.flashback, nopk=self.nopk, eStartPos=eStartPos)
                         if self.flashback:
                             ftmp.write(sql + '\n')
                         else:
-                            print sql
+                            print (sql)
 
                 if not (isinstance(binlogevent, RotateEvent) or isinstance(binlogevent, FormatDescriptionEvent)):
                     lastPos = binlogevent.packet.log_pos
@@ -115,9 +117,9 @@ class Binlog2sql(object):
             sleepInterval = 1000
             i = 0
             for line in reversed_lines(ftmp):
-                print line.rstrip()
+                print (line.rstrip())
                 if i >= sleepInterval:
-                    print 'SELECT SLEEP(1);'
+                    print ('SELECT SLEEP(1);')
                     i = 0
                 else:
                     i += 1
@@ -128,7 +130,10 @@ class Binlog2sql(object):
 
 if __name__ == '__main__':
 
-    args = command_line_args(sys.argv[1:])
+    args_t = ['-h192.168.134.130','-uroot','-p123456','-P3307','--start-file=mysql-bin.000122','-dzabbix','-thosts']
+    args = command_line_args(args_t)
+    # args = command_line_args(sys.argv[1:])
+
     connectionSettings = {'host':args.host, 'port':args.port, 'user':args.user, 'passwd':args.password}
     binlog2sql = Binlog2sql(connectionSettings=connectionSettings, startFile=args.startFile,
                             startPos=args.startPos, endFile=args.endFile, endPos=args.endPos,
