@@ -121,11 +121,12 @@ def concat_sql_from_binlogevent(cursor, binlogevent, row=None, eStartPos=None, f
     sql = ''
     if isinstance(binlogevent, WriteRowsEvent) or isinstance(binlogevent, UpdateRowsEvent) or isinstance(binlogevent, DeleteRowsEvent):
         pattern = generate_sql_pattern(binlogevent, row=row, flashback=flashback, nopk=nopk)
+        # print(list(pattern['values']))
         sql = cursor.mogrify(pattern['template'], list(pattern['values']))
         sql += ' #start %s end %s time %s' % (eStartPos, binlogevent.packet.log_pos, datetime.datetime.fromtimestamp(binlogevent.timestamp))
     elif flashback is False and isinstance(binlogevent, QueryEvent) and binlogevent.query != 'BEGIN' and binlogevent.query != 'COMMIT':
         if binlogevent.schema:
-            sql = 'USE {0};\n'.format(binlogevent.schema)
+            sql = 'USE {0};\n'.format(binlogevent.schema.decode('utf-8'))
         sql += '{0};'.format(fix_object(binlogevent.query))
 
     return sql

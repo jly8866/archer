@@ -130,11 +130,11 @@ class Binlog2sql(object):
 
 if __name__ == '__main__':
 
-    args_t = ['-h192.168.134.130','-uroot','-p123456','-P3307','--start-file=mysql-bin.000122','-dzabbix','-thosts']
+    args_t = ['-h192.168.134.130','-uroot','-p123456','-P3307','--start-file=mysql-bin.000109','--stop-never','-dzabbix','-thosts']
     args = command_line_args(args_t)
     # args = command_line_args(sys.argv[1:])
 
-    connectionSettings = {'host':args.host, 'port':args.port, 'user':args.user, 'passwd':args.password}
+    connectionSettings = {'host':args.host, 'port':args.port, 'user':args.user, 'passwd':args.password,'charset':'utf8'}
     binlog2sql = Binlog2sql(connectionSettings=connectionSettings, startFile=args.startFile,
                             startPos=args.startPos, endFile=args.endFile, endPos=args.endPos,
                             startTime=args.startTime, stopTime=args.stopTime, only_schemas=args.databases,
