@@ -130,7 +130,7 @@ class Binlog2sql(object):
 
 if __name__ == '__main__':
 
-    args_t = ['-h192.168.134.130','-uroot','-p123456','-P3307','--start-file=mysql-bin.000109','--stop-never','-dzabbix','-thosts']
+    args_t = ['-h192.168.134.130','-uroot','-p123456','-P3307','--start-file=mysql-bin.000128','--stop-file=mysql-bin.000130','-dbinlog2sql','-B']
     args = command_line_args(args_t)
     # args = command_line_args(sys.argv[1:])
 
