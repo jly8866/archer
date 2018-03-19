@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
 from django.core import serializers
+from django.db import transaction
 from datetime import date
 import datetime
 import time
@@ -184,14 +185,19 @@ def getqueryapplylist(request):
     # 审核列表跳转
     workflow_id = request.POST.get('workflow_id')
     # 获取列表数据,申请人只能查看自己申请的数据,管理员可以看到全部数据
-    if loginUserOb.is_superuser:
-        if workflow_id != '0':
+    if workflow_id != '0':
+        # 判断权限
+        audit_users = workflowOb.auditinfobyworkflow_id(workflow_id, WorkflowDict.workflow_type['query']).audit_users
+        if loginUserOb.is_superuser or loginUserOb.username in audit_users.split(','):
             applylist = QueryPrivilegesApply.objects.filter(apply_id=workflow_id)
             applylistCount = QueryPrivilegesApply.objects.filter(apply_id=workflow_id).count()
         else:
-            applylist = QueryPrivilegesApply.objects.all().filter(title__contains=search).order_by('-apply_id')[
-                        offset:limit]
-            applylistCount = QueryPrivilegesApply.objects.all().filter(title__contains=search).count()
+            result = {"total": 0, "rows": []}
+            return HttpResponse(json.dumps(result), content_type='application/json')
+    elif loginUserOb.is_superuser:
+        applylist = QueryPrivilegesApply.objects.all().filter(title__contains=search).order_by('-apply_id')[
+                    offset:limit]
+        applylistCount = QueryPrivilegesApply.objects.all().filter(title__contains=search).count()
     else:
         applylist = QueryPrivilegesApply.objects.filter(user_name=loginUserOb.username).filter(
             title__contains=search).order_by('-apply_id')[offset:limit]
@@ -250,31 +256,37 @@ def applyforprivileges(request):
                 result['msg'] = '你已拥有' + cluster_name + '集群' + db_name + '.' + table_name + '表的查询权限，不能重复申请'
                 return HttpResponse(json.dumps(result), content_type='application/json')
 
-    # 保存申请信息到数据库
-    applyinfo = QueryPrivilegesApply()
-    applyinfo.title = title
-    applyinfo.user_name = loginUser
-    applyinfo.cluster_id = cluster_id
-    applyinfo.cluster_name = cluster_name
-    applyinfo.db_name = db_name
-    applyinfo.table_list = ','.join(table_list)
-    applyinfo.valid_date = valid_date
-    applyinfo.status = WorkflowDict.workflow_status['audit_wait']  # 待审核
-    applyinfo.limit_num = limit_num
-    applyinfo.create_user = loginUser
-    applyinfo.save()
-    apply_id = applyinfo.apply_id
+    # 使用事务保持数据一致性
+    try:
+        with transaction.atomic():
+            # 保存申请信息到数据库
+            applyinfo = QueryPrivilegesApply()
+            applyinfo.title = title
+            applyinfo.user_name = loginUser
+            applyinfo.cluster_id = cluster_id
+            applyinfo.cluster_name = cluster_name
+            applyinfo.db_name = db_name
+            applyinfo.table_list = ','.join(table_list)
+            applyinfo.valid_date = valid_date
+            applyinfo.status = WorkflowDict.workflow_status['audit_wait']  # 待审核
+            applyinfo.limit_num = limit_num
+            applyinfo.create_user = loginUser
+            applyinfo.save()
+            apply_id = applyinfo.apply_id
 
-    # 调用工作流插入审核信息,查询权限申请workflow_type=2
-    auditresult = workflowOb.addworkflowaudit(request, WorkflowDict.workflow_type['query'], apply_id,
-                                              title, loginUser, workflow_remark)
+            # 调用工作流插入审核信息,查询权限申请workflow_type=2
+            auditresult = workflowOb.addworkflowaudit(request, WorkflowDict.workflow_type['query'], apply_id,
+                                                      title, loginUser, workflow_remark)
 
-    if auditresult['status'] == 0:
-        # 更新业务表审核状态,判断是否插入权限信息
-        query_audit_call_back(apply_id, auditresult['data']['workflow_status'])
-        return HttpResponse(json.dumps(result), content_type='application/json')
+            if auditresult['status'] == 0:
+                # 更新业务表审核状态,判断是否插入权限信息
+                query_audit_call_back(apply_id, auditresult['data']['workflow_status'])
+    except Exception as msg:
+        result['status'] = 1
+        result['msg'] = str(msg)
     else:
-        return HttpResponse(json.dumps(auditresult), content_type='application/json')
+        result = auditresult
+    return HttpResponse(json.dumps(result), content_type='application/json')
 
 
 # 用户的查询权限管理
@@ -403,8 +415,8 @@ def query(request):
     # 查看表结构和执行计划，inception会报错，故单独处理
     elif re.match(r"^show.*create|^explain", sqlContent.lower()) and tb_name:
         try:
-            QueryPrivileges.objects.get(cluster_name=cluster_name, db_name=dbName, table_name=tb_name,
-                                        valid_date__gte=datetime.datetime.now(), is_deleted=0)
+            QueryPrivileges.objects.get(user_name=loginUser, cluster_name=cluster_name, db_name=dbName,
+                                        table_name=tb_name, valid_date__gte=datetime.datetime.now(), is_deleted=0)
         except Exception:
             finalResult['status'] = 1
             finalResult['msg'] = '你无' + dbName + '.' + tb_name + '表的查询权限！请先到查询权限管理进行申请'
@@ -412,7 +424,7 @@ def query(request):
     # sql查询
     else:
         # 先检查是否有该库的权限，防止inception的语法树打印错误时连库权限也未做校验
-        privileges = QueryPrivileges.objects.filter(cluster_name=cluster_name, db_name=dbName,
+        privileges = QueryPrivileges.objects.filter(user_name=loginUser, cluster_name=cluster_name, db_name=dbName,
                                                     valid_date__gte=datetime.datetime.now(), is_deleted=0)
         if len(privileges) == 0:
             finalResult['status'] = 1
@@ -426,10 +438,9 @@ def query(request):
         if table_ref_result['status'] == 0:
             table_ref = table_ref_result['data']
             # 获取表信息,校验是否拥有全部表查询权限
-            QueryPrivilegesOb = QueryPrivileges.objects.all()
+            QueryPrivilegesOb = QueryPrivileges.objects.filter(user_name=loginUser, cluster_name=cluster_name)
             for table in table_ref:
-                privileges = QueryPrivilegesOb.filter(cluster_name=cluster_name, db_name=table['db'],
-                                                      table_name=table['table'],
+                privileges = QueryPrivilegesOb.filter(db_name=table['db'], table_name=table['table'],
                                                       valid_date__gte=datetime.datetime.now(), is_deleted=0)
                 if len(privileges) == 0:
                     finalResult['status'] = 1
@@ -451,7 +462,8 @@ def query(request):
         elif table_ref:
             db_list = [table_info['db'] for table_info in table_ref]
             table_list = [table_info['table'] for table_info in table_ref]
-            user_limit_num = QueryPrivileges.objects.filter(cluster_name=cluster_name,
+            user_limit_num = QueryPrivileges.objects.filter(user_name=loginUser,
+                                                            cluster_name=cluster_name,
                                                             db_name__in=db_list,
                                                             table_name__in=table_list,
                                                             valid_date__gte=datetime.datetime.now(),
@@ -459,7 +471,8 @@ def query(request):
             limit_num = min(int(limit_num), int(user_limit_num['limit_num__min']))
         else:
             # 如果表没获取到则获取涉及库的最小limit限制
-            user_limit_num = QueryPrivileges.objects.filter(cluster_name=cluster_name,
+            user_limit_num = QueryPrivileges.objects.filter(user_name=loginUser,
+                                                            cluster_name=cluster_name,
                                                             db_name=dbName,
                                                             valid_date__gte=datetime.datetime.now(),
                                                             is_deleted=0).aggregate(Min('limit_num'))
@@ -559,7 +572,6 @@ def querylog(request):
 
 # 获取审核列表
 @csrf_exempt
-@superuser_required
 def workflowlist(request):
     # 获取用户信息
     loginUser = request.session.get('login_username', False)
@@ -596,10 +608,10 @@ def workflowlist(request):
 
 # 工单审核
 @csrf_exempt
-@superuser_required
 def workflowaudit(request):
     # 获取用户信息
     loginUser = request.session.get('login_username', False)
+    result = {'status': 0, 'msg': 'ok', 'data': []}
 
     audit_id = int(request.POST['audit_id'])
     audit_status = int(request.POST['audit_status'])
@@ -608,29 +620,35 @@ def workflowaudit(request):
     # 获取审核信息
     auditInfo = workflowOb.auditinfo(audit_id)
 
-    # 调用工作流接口审核
-    auditresult = workflowOb.auditworkflow(audit_id, audit_status, loginUser, audit_remark)
+    # 使用事务保持数据一致性
+    try:
+        with transaction.atomic():
+            # 调用工作流接口审核
+            auditresult = workflowOb.auditworkflow(audit_id, audit_status, loginUser, audit_remark)
 
-    # 按照审核结果更新业务表审核状态
-    if auditresult['status'] == 0:
-        if auditInfo.workflow_type == WorkflowDict.workflow_type['query']:
-            # 更新业务表审核状态,插入权限信息
-            query_audit_call_back(auditInfo.workflow_id, auditresult['data']['workflow_status'])
+            # 按照审核结果更新业务表审核状态
+            if auditresult['status'] == 0:
+                if auditInfo.workflow_type == WorkflowDict.workflow_type['query']:
+                    # 更新业务表审核状态,插入权限信息
+                    query_audit_call_back(auditInfo.workflow_id, auditresult['data']['workflow_status'])
 
-        # 给拒绝和审核通过的申请人发送邮件
-        if hasattr(settings, 'MAIL_ON_OFF') is True and getattr(settings, 'MAIL_ON_OFF') == "on":
-            email_reciver = users.objects.get(username=auditInfo.create_user).email
+                    # 给拒绝和审核通过的申请人发送邮件
+                    if hasattr(settings, 'MAIL_ON_OFF') is True and getattr(settings, 'MAIL_ON_OFF') == "on":
+                        email_reciver = users.objects.get(username=auditInfo.create_user).email
 
-            email_content = "发起人：" + auditInfo.create_user + "\n审核人：" + auditInfo.audit_users \
-                            + "\n工单地址：" + request.scheme + "://" + request.get_host() + "/workflowdetail/" \
-                            + str(audit_id) + "\n工单名称： " + auditInfo.workflow_title \
-                            + "\n审核备注： " + audit_remark
-            if auditresult['data']['workflow_status'] == WorkflowDict.workflow_status['audit_success']:
-                email_title = "工单审核通过 # " + str(auditInfo.audit_id)
-                mailSenderOb.sendEmail(email_title, email_content, [email_reciver])
-            elif auditresult['data']['workflow_status'] == WorkflowDict.workflow_status['audit_reject']:
-                email_title = "工单被驳回 # " + str(auditInfo.audit_id)
-                mailSenderOb.sendEmail(email_title, email_content, [email_reciver])
-        return HttpResponse(json.dumps(auditresult), content_type='application/json')
+                        email_content = "发起人：" + auditInfo.create_user + "\n审核人：" + auditInfo.audit_users \
+                                        + "\n工单地址：" + request.scheme + "://" + request.get_host() + "/workflowdetail/" \
+                                        + str(audit_id) + "\n工单名称： " + auditInfo.workflow_title \
+                                        + "\n审核备注： " + audit_remark
+                        if auditresult['data']['workflow_status'] == WorkflowDict.workflow_status['audit_success']:
+                            email_title = "工单审核通过 # " + str(auditInfo.audit_id)
+                            mailSenderOb.sendEmail(email_title, email_content, [email_reciver])
+                        elif auditresult['data']['workflow_status'] == WorkflowDict.workflow_status['audit_reject']:
+                            email_title = "工单被驳回 # " + str(auditInfo.audit_id)
+                            mailSenderOb.sendEmail(email_title, email_content, [email_reciver])
+    except Exception as msg:
+        result['status'] = 1
+        result['msg'] = str(msg)
     else:
-        return HttpResponse(json.dumps(auditresult), content_type='application/json')
+        result = auditresult
+    return HttpResponse(json.dumps(result), content_type='application/json')
