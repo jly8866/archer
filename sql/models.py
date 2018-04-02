@@ -50,7 +50,7 @@ class workflow(models.Model):
     review_man = models.CharField('审核人', max_length=50)
     create_time = models.DateTimeField('创建时间', auto_now_add=True)
     finish_time = models.DateTimeField('结束时间', null=True, blank=True)
-    status = models.CharField(max_length=50, choices=(('已正常结束','已正常结束'),('人工终止流程','人工终止流程'),('自动审核中','自动审核中'),('等待审核人审核','等待审核人审核'),('执行中','执行中'),('自动审核不通过','自动审核不通过'),('执行有异常','执行有异常')))
+    status = models.CharField(max_length=50, choices=(('已正常结束','已正常结束'),('人工终止流程','人工终止流程'),('自动审核中','自动审核中'),('等待审核人审核','等待审核人审核'),('审核通过','审核通过'),('执行中','执行中'),('自动审核不通过','自动审核不通过'),('执行有异常','执行有异常')))
     #is_backup = models.IntegerField('是否备份，0为否，1为是', choices=((0,0),(1,1)))
     is_backup = models.CharField('是否备份', choices=(('否','否'),('是','是')), max_length=20)
     review_content = models.TextField('自动审核内容的JSON格式')
@@ -58,6 +58,8 @@ class workflow(models.Model):
     reviewok_time = models.DateTimeField('人工审核通过的时间', null=True, blank=True)
     sql_content = models.TextField('具体sql内容')
     execute_result = models.TextField('执行结果的JSON格式')
+    is_manual = models.IntegerField('是否手工执行', choices=((0, '否'), (1, '是')),default=0)
+    audit_remark = models.TextField('审核备注', null=True)
 
     def __str__(self):
         return self.workflow_name
@@ -68,8 +70,8 @@ class workflow(models.Model):
 
 # 各个线上从库地址
 class slave_config(models.Model):
-    cluster_id = models.IntegerField('集群id')
-    cluster_name = models.CharField('集群名称', max_length=50)
+    cluster_id = models.IntegerField('对应集群id', unique=True)
+    cluster_name = models.CharField('对应集群名称', unique=True, max_length=50)
     slave_host = models.CharField('从库地址', max_length=200)
     slave_port = models.IntegerField('从库端口', default=3306)
     slave_user = models.CharField('登录从库的用户名', max_length=100)
@@ -111,6 +113,7 @@ class WorkflowAudit(models.Model):
 
     class Meta:
         db_table = 'workflow_audit'
+        unique_together = ('workflow_id', 'workflow_type')
         verbose_name = u'工作流列表'
         verbose_name_plural = u'工作流列表'
 
@@ -137,8 +140,7 @@ class WorkflowAuditDetail(models.Model):
 # 审批配置表
 class WorkflowAuditSetting(models.Model):
     audit_setting_id = models.AutoField(primary_key=True)
-    workflow_type = models.IntegerField('申请类型,',
-                                        choices=((1, '查询权限申请'),))
+    workflow_type = models.IntegerField('申请类型,',choices=((1, '查询权限申请'),), unique=True)
     audit_users = models.CharField('审核人，单人审核格式为：user1，多级审核格式为：user1,user2', max_length=255)
     create_time = models.DateTimeField(auto_now_add=True)
     sys_time = models.DateTimeField(auto_now=True)
@@ -159,10 +161,11 @@ class QueryPrivilegesApply(models.Model):
     user_name = models.CharField('申请人', max_length=30)
     cluster_id = models.IntegerField('集群id')
     cluster_name = models.CharField('集群名称', max_length=50)
-    db_name = models.CharField('数据库', max_length=200)
+    db_list = models.CharField('数据库', max_length=200)
     table_list = models.TextField('表')
     valid_date = models.CharField('有效时间', max_length=30)
     limit_num = models.IntegerField('行数限制', default=100)
+    priv_type = models.IntegerField('权限类型', choices=((1, 'DATABASE'), (2, 'TABLE'),), default=0)
     status = models.IntegerField('审核状态', choices=((0, '待审核'), (1, '审核通过'), (2, '审核不通过'), (3, '审核取消')), )
     create_time = models.DateTimeField(auto_now_add=True)
     sys_time = models.DateTimeField(auto_now=True)
@@ -186,6 +189,7 @@ class QueryPrivileges(models.Model):
     table_name = models.CharField('表', max_length=200)
     valid_date = models.CharField('有效时间', max_length=30)
     limit_num = models.IntegerField('行数限制', default=100)
+    priv_type = models.IntegerField('权限类型', choices=((1, 'DATABASE'), (2, 'TABLE'),), default=0)
     is_deleted = models.IntegerField('是否删除', default=0)
     create_time = models.DateTimeField(auto_now_add=True)
     sys_time = models.DateTimeField(auto_now=True)
@@ -220,11 +224,11 @@ class QueryLog(models.Model):
         verbose_name = u'sql查询日志'
         verbose_name_plural = u'sql查询日志'
 
-
+# 脱敏字段配置
 class DataMaskingColumns(models.Model):
     column_id = models.AutoField('字段id', primary_key=True)
     rule_type = models.IntegerField('规则类型',
-                                    choices=((1, '手机号'), (2, '姓名'), (3, '证件号码'), (4, '银行卡'), (5, '邮箱')))
+                                    choices=((1, '手机号'), (2, '证件号码'), (3, '银行卡'), (4, '邮箱'), (5, '金额')))
     active = models.IntegerField('激活状态', choices=((0, '未激活'), (1, '激活')))
     cluster_id = models.IntegerField('字段所在集群id')
     cluster_name = models.CharField('字段所在集群名称', max_length=50)
@@ -237,18 +241,56 @@ class DataMaskingColumns(models.Model):
 
     class Meta:
         db_table = 'data_masking_columns'
-        verbose_name = u'脱敏字段'
-        verbose_name_plural = u'脱敏字段'
+        verbose_name = u'脱敏字段配置'
+        verbose_name_plural = u'脱敏字段配置'
 
-
+# 脱敏规则配置
 class DataMaskingRules(models.Model):
     rule_type = models.IntegerField('规则类型',
-                                    choices=((1, '手机号'), (2, '证件号码'), (3, '银行卡'), (4, '邮箱'), (5, '金额')))
-    rule_regex = models.CharField('规则脱敏所用的正则表达式，表达式必须分组，脱敏后只显示第一组匹配的信息，后面的信息会用****代替', max_length=255)
+                                    choices=((1, '手机号'), (2, '证件号码'), (3, '银行卡'), (4, '邮箱'), (5, '金额')), unique=True)
+    rule_regex = models.CharField('规则脱敏所用的正则表达式，表达式必须分组，隐藏的组会使用****代替', max_length=255)
+    hide_group = models.IntegerField('需要隐藏的组')
     rule_desc = models.CharField('规则描述', max_length=100)
     sys_time = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'data_masking_rules'
-        verbose_name = u'脱敏规则'
-        verbose_name_plural = u'脱敏规则'
+        verbose_name = u'脱敏规则配置'
+        verbose_name_plural = u'脱敏规则配置'
+
+# 记录阿里云的认证信息
+class AliyunAccessKey(models.Model):
+    id = models.AutoField(primary_key=True)
+    ak = models.CharField(max_length=50)
+    secret = models.CharField(max_length=100)
+    is_enable = models.IntegerField(choices=((1, '启用'), (2, '禁用')))
+    remark = models.CharField(max_length=50, default='')
+
+    def __int__(self):
+        return self.id
+
+    class Meta:
+        db_table = 'aliyun_access_key'
+        verbose_name = u'阿里云认证信息'
+        verbose_name_plural = u'阿里云认证信息'
+
+    def save(self, *args, **kwargs):
+        pc = Prpcrypt()  # 初始化
+        self.ak = pc.encrypt(self.ak)
+        self.secret = pc.encrypt(self.secret)
+        super(AliyunAccessKey, self).save(*args, **kwargs)
+
+# 阿里云rds配置信息
+class AliyunRdsConfig(models.Model):
+    cluster_id = models.IntegerField('对应集群id', unique=True)
+    cluster_name = models.CharField('对应集群名称', unique=True, max_length=50)
+    rds_dbinstanceid = models.CharField('阿里云RDS实例ID', max_length=100)
+
+    def __int__(self):
+        return self.rds_dbinstanceid
+
+    class Meta:
+        db_table = 'aliyun_rds_config'
+        verbose_name = u'阿里云rds配置信息'
+        verbose_name_plural = u'阿里云rds配置信息'
+

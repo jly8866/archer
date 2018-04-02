@@ -6,7 +6,9 @@ import time
 import multiprocessing
 from collections import OrderedDict
 
+import time
 from django.db.models import Q
+from django.utils import timezone
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
@@ -20,8 +22,9 @@ from .const import Const, WorkflowDict
 from .sendmail import MailSender
 from .inception import InceptionDao
 from .aes_decryptor import Prpcrypt
-from .models import users, master_config, workflow, slave_config, QueryPrivileges
+from .models import users, master_config, AliyunRdsConfig, workflow, slave_config, QueryPrivileges
 from .workflow import Workflow
+from .permission import role_required, superuser_required
 
 dao = Dao()
 inceptionDao = InceptionDao()
@@ -39,73 +42,7 @@ def logout(request):
 
 #首页，也是查看所有SQL工单页面，具备翻页功能
 def allworkflow(request):
-    #一个页面展示
-    PAGE_LIMIT = 12
-
-    pageNo = 0
-    navStatus = ''
-    listAllWorkflow = []
-
-    #参数检查
-    if 'pageNo' in request.GET:
-        pageNo = request.GET['pageNo']
-    else:
-        pageNo = '0'
-
-    if 'navStatus' in request.GET:
-        navStatus = request.GET['navStatus']
-    else:
-        navStatus = 'all'
-    if not isinstance(pageNo, str) or not isinstance(navStatus, str):
-        raise TypeError('pageNo或navStatus页面传入参数不对')
-    else:
-        try:
-            pageNo = int(pageNo)
-            if pageNo < 0:
-                pageNo = 0
-        except ValueError as ve:
-            context = {'errMsg': 'pageNo参数不是int.'}
-            return render(request, 'error.html', context)
-
-    loginUser = request.session.get('login_username', False)
-    #查询workflow model，根据pageNo和navStatus获取对应的内容
-    offset = pageNo * PAGE_LIMIT
-    limit = offset + PAGE_LIMIT
-
-    #修改全部工单、审核不通过、已执行完毕界面工程师只能看到自己发起的工单，审核人可以看到全部
-    listWorkflow = []
-    #查询全部流程
-    loginUserOb = users.objects.get(username=loginUser)
-    role = loginUserOb.role
-    if navStatus == 'all' and role == '审核人':
-        #这句话等同于select * from sql_workflow order by create_time desc limit {offset, limit};
-        listWorkflow = workflow.objects.exclude(status=Const.workflowStatus['autoreviewwrong']).order_by('-create_time')[offset:limit]
-    elif navStatus == 'all' and role == '工程师':
-        listWorkflow = workflow.objects.filter(Q(engineer=loginUser) | Q(status=Const.workflowStatus['autoreviewwrong']), engineer=loginUser).order_by('-create_time')[offset:limit]
-    elif navStatus == 'waitingforme':
-        listWorkflow = workflow.objects.filter(Q(status=Const.workflowStatus['manreviewing'], review_man=loginUser) | Q(status=Const.workflowStatus['manreviewing'], review_man__contains='"' + loginUser + '"')).order_by('-create_time')[offset:limit]
-    elif navStatus == 'finish' and role == '审核人':
-        listWorkflow = workflow.objects.filter(status=Const.workflowStatus['finish']).order_by('-create_time')[offset:limit]
-    elif navStatus == 'finish' and role == '工程师':
-        listWorkflow = workflow.objects.filter(status=Const.workflowStatus['finish'], engineer=loginUser).order_by('-create_time')[offset:limit]
-    elif navStatus == 'executing' and role == '审核人':
-        listWorkflow = workflow.objects.filter(status=Const.workflowStatus['executing']).order_by('-create_time')[offset:limit]
-    elif navStatus == 'executing' and role == '工程师':
-        listWorkflow = workflow.objects.filter(status=Const.workflowStatus['executing'], engineer=loginUser).order_by('-create_time')[offset:limit]
-    elif navStatus == 'abort' and role == '审核人':
-        listWorkflow = workflow.objects.filter(status=Const.workflowStatus['abort']).order_by('-create_time')[offset:limit]
-    elif navStatus == 'abort' and role == '工程师':
-        listWorkflow = workflow.objects.filter(status=Const.workflowStatus['abort'], engineer=loginUser).order_by('-create_time')[offset:limit]
-    elif navStatus == 'autoreviewwrong' and role == '审核人':
-        listWorkflow = workflow.objects.filter(status=Const.workflowStatus['autoreviewwrong']).order_by('-create_time')[offset:limit]
-    elif navStatus == 'autoreviewwrong' and role == '工程师':
-        listWorkflow = workflow.objects.filter(status=Const.workflowStatus['autoreviewwrong'], engineer=loginUser).order_by('-create_time')[offset:limit]
-    else:
-        context = {'errMsg': '传入的navStatus参数有误！'}
-        return render(request, 'error.html', context)
-
-
-    context = {'currentMenu':'allworkflow', 'listWorkflow':listWorkflow, 'pageNo':pageNo, 'navStatus':navStatus, 'PAGE_LIMIT':PAGE_LIMIT, 'role':role}
+    context = {'currentMenu':'allworkflow'}
     return render(request, 'allWorkflow.html', context)
 
 #提交SQL的页面
@@ -134,9 +71,9 @@ def submitSql(request):
         listDb = dao.getAlldbByCluster(masterHost, masterPort, masterUser, masterPassword)
         dictAllClusterDb[clusterName] = listDb
 
-    #获取所有审核人，当前登录用户不可以审核
+    #获取所有审核人
     loginUser = request.session.get('login_username', False)
-    reviewMen = users.objects.filter(role='审核人').exclude(username=loginUser)
+    reviewMen = users.objects.filter(role='审核人')
     if len(reviewMen) == 0:
        context = {'errMsg': '审核人为0，请配置审核人'}
        return render(request, 'error.html', context)
@@ -188,7 +125,7 @@ def autoreview(request):
     engineer = request.session.get('login_username', False)
     if not workflowid:
         Workflow = workflow()
-        Workflow.create_time = getNow()
+        Workflow.create_time = timezone.now()
     else:
         Workflow = workflow.objects.get(id=int(workflowid))
     Workflow.workflow_name = workflowName
@@ -200,6 +137,7 @@ def autoreview(request):
     Workflow.cluster_name = clusterName
     Workflow.sql_content = sqlContent
     Workflow.execute_result = ''
+    Workflow.audit_remark = ''
     Workflow.save()
     workflowId = Workflow.id
 
@@ -228,7 +166,8 @@ def autoreview(request):
 #展示SQL工单详细内容，以及可以人工审核，审核通过即可执行
 def detail(request, workflowId):
     workflowDetail = get_object_or_404(workflow, pk=workflowId)
-    if workflowDetail.status in (Const.workflowStatus['finish'], Const.workflowStatus['exception']):
+    if workflowDetail.status in (Const.workflowStatus['finish'], Const.workflowStatus['exception']) \
+            and workflowDetail.is_manual == 0:
         listContent = json.loads(workflowDetail.execute_result)
     else:
         listContent = json.loads(workflowDetail.review_content)
@@ -237,12 +176,147 @@ def detail(request, workflowId):
     except ValueError:
         listAllReviewMen = (workflowDetail.review_man, )
 
+    # 获取用户信息
+    loginUser = request.session.get('login_username', False)
+    loginUserOb = users.objects.get(username=loginUser)
+
     # 格式化detail界面sql语句和审核/执行结果 by 搬砖工
     for Content in listContent:
         Content[4] = Content[4].split('\n')     # 审核/执行结果
         Content[5] = Content[5].split('\r\n')   # sql语句
-    context = {'currentMenu':'allworkflow', 'workflowDetail':workflowDetail, 'listContent':listContent,'listAllReviewMen':listAllReviewMen}
+    context = {'currentMenu':'allworkflow', 'workflowDetail':workflowDetail, 'listContent':listContent,'listAllReviewMen':listAllReviewMen,'loginUserOb': loginUserOb}
     return render(request, 'detail.html', context)
+
+#审核通过，不执行
+def passonly(request):
+    workflowId = request.POST['workflowid']
+    if workflowId == '' or workflowId is None:
+        context = {'errMsg': 'workflowId参数为空.'}
+        return render(request, 'error.html', context)
+    workflowId = int(workflowId)
+    workflowDetail = workflow.objects.get(id=workflowId)
+    clusterName = workflowDetail.cluster_name
+    try:
+        listAllReviewMen = json.loads(workflowDetail.review_man)
+    except ValueError:
+        listAllReviewMen = (workflowDetail.review_man, )
+
+    #服务器端二次验证，正在执行人工审核动作的当前登录用户必须为审核人. 避免攻击或被接口测试工具强行绕过
+    loginUser = request.session.get('login_username', False)
+    if loginUser is None or loginUser not in listAllReviewMen:
+        context = {'errMsg': '当前登录用户不是审核人，请重新登录.'}
+        return render(request, 'error.html', context)
+
+    #服务器端二次验证，当前工单状态必须为等待人工审核
+    if workflowDetail.status != Const.workflowStatus['manreviewing']:
+        context = {'errMsg': '当前工单状态不是等待人工审核中，请刷新当前页面！'}
+        return render(request, 'error.html', context)
+
+    #将流程状态修改为审核通过，并更新reviewok_time字段
+    workflowDetail.status = Const.workflowStatus['pass']
+    workflowDetail.reviewok_time = timezone.now()
+    workflowDetail.audit_remark = ''
+    workflowDetail.save()
+
+    #如果执行完毕了，则根据settings.py里的配置决定是否给提交者和DBA一封邮件提醒.DBA需要知晓审核并执行过的单子
+    if getattr(settings, 'MAIL_ON_OFF') == "on":
+        url = _getDetailUrl(request) + str(workflowId) + '/'
+
+        #给主、副审核人，申请人，DBA各发一封邮件
+        engineer = workflowDetail.engineer
+        reviewMen = workflowDetail.review_man
+        workflowStatus = workflowDetail.status
+        workflowName = workflowDetail.workflow_name
+        objEngineer = users.objects.get(username=engineer)
+        strTitle = "SQL上线工单审核通过 # " + str(workflowId)
+        strContent = "发起人：" + engineer + "\n审核人：" + reviewMen + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n审核结果：" + workflowStatus
+        mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
+        mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
+        for reviewMan in listAllReviewMen:
+            if reviewMan == "":
+                continue
+            objReviewMan = users.objects.get(username=reviewMan)
+            mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
+    else:
+        #不发邮件
+        pass
+
+    return HttpResponseRedirect('/detail/' + str(workflowId) + '/')
+
+
+# 仅执行SQL
+def executeonly(request):
+    workflowId = request.POST['workflowid']
+    if workflowId == '' or workflowId is None:
+        context = {'errMsg': 'workflowId参数为空.'}
+        return render(request, 'error.html', context)
+
+    workflowId = int(workflowId)
+    workflowDetail = workflow.objects.get(id=workflowId)
+    clusterName = workflowDetail.cluster_name
+    try:
+        listAllReviewMen = json.loads(workflowDetail.review_man)
+    except ValueError:
+        listAllReviewMen = (workflowDetail.review_man, )
+
+    #服务器端二次验证，正在执行人工审核动作的当前登录用户必须为审核人或者提交人. 避免攻击或被接口测试工具强行绕过
+    loginUser = request.session.get('login_username', False)
+    if loginUser is None or (loginUser not in listAllReviewMen and loginUser != workflowDetail.engineer):
+        context = {'errMsg': '当前登录用户不是审核人或者提交人，请重新登录.'}
+        return render(request, 'error.html', context)
+
+    #服务器端二次验证，当前工单状态必须为审核通过状态
+    if workflowDetail.status != Const.workflowStatus['pass']:
+        context = {'errMsg': '当前工单状态不是审核通过，请刷新当前页面！'}
+        return render(request, 'error.html', context)
+
+    dictConn = getMasterConnStr(clusterName)
+
+    #将流程状态修改为执行中，并更新reviewok_time字段
+    workflowDetail.status = Const.workflowStatus['executing']
+    workflowDetail.reviewok_time = timezone.now()
+    #执行之前重新split并check一遍，更新SHA1缓存；因为如果在执行中，其他进程去做这一步操作的话，会导致inception core dump挂掉
+    splitReviewResult = inceptionDao.sqlautoReview(workflowDetail.sql_content, workflowDetail.cluster_name, isSplit='yes')
+    workflowDetail.review_content = json.dumps(splitReviewResult)
+    workflowDetail.save()
+
+    #交给inception先split，再执行
+    (finalStatus, finalList) = inceptionDao.executeFinal(workflowDetail, dictConn)
+
+    #封装成JSON格式存进数据库字段里
+    strJsonResult = json.dumps(finalList)
+    workflowDetail.execute_result = strJsonResult
+    workflowDetail.finish_time = timezone.now()
+    workflowDetail.status = finalStatus
+    workflowDetail.is_manual=0
+    workflowDetail.audit_remark = ''
+    workflowDetail.save()
+
+    #如果执行完毕了，则根据settings.py里的配置决定是否给提交者和DBA一封邮件提醒.DBA需要知晓审核并执行过的单子
+    if hasattr(settings, 'MAIL_ON_OFF') == True:
+        if getattr(settings, 'MAIL_ON_OFF') == "on":
+            url = _getDetailUrl(request) + str(workflowId) + '/'
+
+            #给主、副审核人，申请人，DBA各发一封邮件
+            engineer = workflowDetail.engineer
+            reviewMen = workflowDetail.review_man
+            workflowStatus = workflowDetail.status
+            workflowName = workflowDetail.workflow_name
+            objEngineer = users.objects.get(username=engineer)
+            strTitle = "SQL上线工单执行完毕 # " + str(workflowId)
+            strContent = "发起人：" + engineer + "\n审核人：" + reviewMen + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n执行结果：" + workflowStatus
+            mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
+            mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
+            for reviewMan in listAllReviewMen:
+                if reviewMan == "":
+                    continue
+                objReviewMan = users.objects.get(username=reviewMan)
+                mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
+        else:
+            #不发邮件
+            pass
+
+    return HttpResponseRedirect('/detail/' + str(workflowId) + '/')
 
 #人工审核也通过，执行SQL
 def execute(request):
@@ -274,7 +348,7 @@ def execute(request):
 
     #将流程状态修改为执行中，并更新reviewok_time字段
     workflowDetail.status = Const.workflowStatus['executing']
-    workflowDetail.reviewok_time = getNow()
+    workflowDetail.reviewok_time = timezone.now()
     #执行之前重新split并check一遍，更新SHA1缓存；因为如果在执行中，其他进程去做这一步操作的话，会导致inception core dump挂掉
     splitReviewResult = inceptionDao.sqlautoReview(workflowDetail.sql_content, workflowDetail.cluster_name, isSplit='yes')
     workflowDetail.review_content = json.dumps(splitReviewResult)
@@ -288,6 +362,8 @@ def execute(request):
     workflowDetail.execute_result = strJsonResult
     workflowDetail.finish_time = getNow()
     workflowDetail.status = finalStatus
+    workflowDetail.is_manual=0
+    workflowDetail.audit_remark = ''
     workflowDetail.save()
 
     #如果执行完毕了，则根据settings.py里的配置决定是否给提交者和DBA一封邮件提醒.DBA需要知晓审核并执行过的单子
@@ -314,6 +390,85 @@ def execute(request):
             #不发邮件
             pass
 
+    return HttpResponseRedirect(reverse('sql:detail', args=(workflowId,)))
+
+
+# 跳过inception直接执行申请
+@superuser_required
+def execute_skipinc(request):
+    workflowId = request.POST['workflowid']
+    finalResult = {'status': 0, 'msg': 'ok', 'data': []}
+
+    # 获取工单信息
+    workflowId = int(workflowId)
+    workflowDetail = workflow.objects.get(id=workflowId)
+    sql_content = workflowDetail.sql_content
+    clusterName = workflowDetail.cluster_name
+    try:
+        listAllReviewMen = json.loads(workflowDetail.review_man)
+    except ValueError:
+        listAllReviewMen = (workflowDetail.review_man,)
+
+    #服务器端二次验证，当前工单状态必须为等待人工审核/审核通过/自动审核不通过
+    if workflowDetail.status not in [Const.workflowStatus['manreviewing'],Const.workflowStatus['pass'],Const.workflowStatus['autoreviewwrong']]:
+        context = {'errMsg': '当前工单状态不是等待人工审核/审核通过/自动审核不通过，请刷新当前页面！'}
+        return render(request, 'error.html', context)
+
+    # 获取实例连接信息
+    masterInfo = getMasterConnStr(clusterName)
+
+    # 更新工单状态为执行中
+    workflowDetail = workflow.objects.get(id=workflowId)
+    workflowDetail.status = Const.workflowStatus['executing']
+    workflowDetail.reviewok_time = timezone.now()
+    workflowDetail.save()
+    # 执行sql
+    t_start = time.time()
+    execute_result = dao.mysql_execute(masterInfo['masterHost'], masterInfo['masterPort'], masterInfo['masterUser'],
+                                       masterInfo['masterPassword'], sql_content)
+    t_end = time.time()
+    execute_time = "%5s" % "{:.4f}".format(t_end - t_start)
+    execute_result['execute_time'] = execute_time + 'sec'
+
+    if execute_result.get('Warning'):
+        finalResult['status'] = 1
+        finalResult['msg'] = execute_result['Warning']
+        workflowDetail.status = Const.workflowStatus['exception']
+    elif execute_result.get('Error'):
+        finalResult['status'] = 2
+        finalResult['msg'] = execute_result['Error']
+        workflowDetail.status = Const.workflowStatus['exception']
+    else:
+        workflowDetail.status = Const.workflowStatus['finish']
+    workflowDetail.finish_time = timezone.now()
+    workflowDetail.execute_result = json.dumps(execute_result)
+    workflowDetail.is_manual = 1
+    workflowDetail.audit_remark = ''
+    workflowDetail.is_backup = '否'
+    workflowDetail.save()
+
+    # 如果执行完毕了，则根据settings.py里的配置决定是否给提交者和DBA一封邮件提醒.DBA需要知晓审核并执行过的单子
+    if getattr(settings, 'MAIL_ON_OFF') == "on":
+        url = _getDetailUrl(request) + str(workflowId) + '/'
+        # 给主、副审核人，申请人，DBA各发一封邮件
+        engineer = workflowDetail.engineer
+        reviewMen = workflowDetail.review_man
+        workflowStatus = workflowDetail.status
+        workflowName = workflowDetail.workflow_name
+        objEngineer = users.objects.get(username=engineer)
+        strTitle = "SQL上线工单执行完毕 # " + str(workflowId)
+        strContent = "发起人：" + engineer + "\n审核人：" + reviewMen + "\n工单地址：" + url + "\n工单名称： " + workflowName + "\n执行结果：" + workflowStatus
+        mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
+        mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
+        for reviewMan in listAllReviewMen:
+            if reviewMan == "":
+                continue
+            objReviewMan = users.objects.get(username=reviewMan)
+            mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
+    else:
+        # 不发邮件
+        pass
+
     return HttpResponseRedirect('/detail/' + str(workflowId) + '/')
 
 #终止流程
@@ -331,6 +486,11 @@ def cancel(request):
     except ValueError:
         listAllReviewMen = (reviewMan, )
 
+    audit_remark = request.POST.get('audit_remark')
+    if audit_remark is None:
+        context = {'errMsg': '驳回原因不能为空'}
+        return render(request, 'error.html', context)
+
     #服务器端二次验证，如果正在执行终止动作的当前登录用户，不是发起人也不是审核人，则异常.
     loginUser = request.session.get('login_username', False)
     if loginUser is None or (loginUser not in listAllReviewMen and loginUser != workflowDetail.engineer):
@@ -342,6 +502,7 @@ def cancel(request):
         return HttpResponseRedirect('/detail/' + str(workflowId) + '/')
 
     workflowDetail.status = Const.workflowStatus['abort']
+    workflowDetail.audit_remark = audit_remark
     workflowDetail.save()
 
     #如果人工终止了，则根据settings.py里的配置决定是否给提交者和审核人发邮件提醒。如果是发起人终止流程，则给主、副审核人各发一封；如果是审核人终止流程，则给发起人发一封邮件，并附带说明此单子被拒绝掉了，需要重新修改.
@@ -430,6 +591,41 @@ def _getDetailUrl(request):
     host = request.META['HTTP_HOST']
     return "%s://%s/detail/" % (scheme, host)
 
+# SQL在线查询
+def sqlquery(request):
+    # 获取用户信息
+    loginUser = request.session.get('login_username', False)
+
+    # 获取所有从库集群名称
+    slaves = slave_config.objects.all().order_by('cluster_name')
+    if len(slaves) == 0:
+        context = {'errMsg': '从库信息为0，在线查询依赖从库，请先配置从库信息'}
+        return render(request, 'error.html', context)
+    listAllClusterName = [slave.cluster_name for slave in slaves]
+
+    context = {'currentMenu': 'sqlquery', 'listAllClusterName': listAllClusterName}
+    return render(request, 'sqlquery.html', context)
+
+# SQL慢日志
+def slowquery(request):
+    # 获取所有实例名称
+    masters = AliyunRdsConfig.objects.all().order_by('cluster_name')
+    cluster_name_list = [master.cluster_name for master in masters]
+
+    context = {'currentMenu': 'slowquery', 'tab': 'slowquery', 'cluster_name_list': cluster_name_list}
+    return render(request, 'slowquery.html', context)
+
+# SQL优化工具
+def sqladvisor(request):
+    # 获取所有从库集群名称
+    slaves = slave_config.objects.all().order_by('cluster_name')
+    if len(slaves) == 0:
+        context = {'errMsg': '从库信息为0，在线查询依赖从库，请先配置从库信息'}
+        return render(request, 'error.html', context)
+    listAllClusterName = [slave.cluster_name for slave in slaves]
+
+    context = {'currentMenu': 'sqladvisor', 'listAllClusterName': listAllClusterName}
+    return render(request, 'sqladvisor.html', context)
 
 # 查询权限申请列表
 def queryapplylist(request, workflow_id):
@@ -452,25 +648,28 @@ def queryuserprivileges(request):
     context = {'currentMenu': 'queryapply', 'user_list': user_list, 'loginUserOb': loginUserOb}
     return render(request, 'queryuserprivileges.html', context)
 
-
-# SQL在线查询
-def sqlquery(request):
+# 问题诊断--进程
+def diagnosis_process(request):
     # 获取用户信息
     loginUser = request.session.get('login_username', False)
     loginUserOb = users.objects.get(username=loginUser)
 
-    # 获取所有从库集群名称
-    slaves = slave_config.objects.all().order_by('cluster_name')
-    if len(slaves) == 0:
-        context = {'errMsg': '从库信息为0，在线查询依赖从库，请先配置从库信息'}
-        return render(request, 'error.html', context)
+    # 获取所有实例名称
+    masters = AliyunRdsConfig.objects.all().order_by('cluster_name')
+    cluster_name_list = [master.cluster_name for master in masters]
 
+    context = {'currentMenu': 'diagnosis', 'tab': 'process', 'cluster_name_list': cluster_name_list,
+               'loginUserOb': loginUserOb}
+    return render(request, 'diagnosis.html', context)
 
-    listAllClusterName = [slave.cluster_name for slave in slaves]
+# 问题诊断--空间
+def diagnosis_sapce(request):
+    # 获取所有实例名称
+    masters = AliyunRdsConfig.objects.all().order_by('cluster_name')
+    cluster_name_list = [master.cluster_name for master in masters]
 
-    context = {'currentMenu': 'sqlquery', 'listAllClusterName': listAllClusterName}
-    return render(request, 'sqlquery.html', context)
-
+    context = {'currentMenu': 'diagnosis', 'tab': 'space', 'cluster_name_list': cluster_name_list}
+    return render(request, 'diagnosis.html', context)
 
 # 获取工作流审核列表
 def workflows(request):
