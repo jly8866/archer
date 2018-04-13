@@ -122,7 +122,7 @@ cd archer && python3 manage.py createsuperuser<br/>
 ### 已经制作好的docker镜像：
 * 如果不想自己安装上述，可以直接使用做好的docker镜像，参考wiki：
     * inception镜像: https://dev.aliyun.com/detail.html?spm=5176.1972343.2.12.7b475aaaLiCfMf&repoId=142093
-    * archer镜像: https://dev.aliyun.com/detail.html?spm=5176.1972343.2.38.XtXtLh&repoId=142147
+    * archer镜像: https://dev.aliyun.com/detail.html?spm=5176.1972343.2.38.XtXtLh&repoId=142147
 * docker镜像制作感谢@小圈圈 提供
 
 ### 系统展示截图：
