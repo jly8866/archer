@@ -115,26 +115,29 @@ class Workflow(object):
                 auditresult.audit_id = audit_id
                 auditresult.current_audit_user = '-1'
                 auditresult.current_status = DirectionsOb.workflow_status['audit_success']
-                auditresult.save(update_fields=['current_audit_user', 'current_status', 'current_status'])
+                auditresult.save(update_fields=['current_audit_user', 'current_status'])
             else:
                 # 更新主表审核下级审核人和当前审核人
                 auditresult = WorkflowAudit()
                 auditresult.audit_id = audit_id
+                auditresult.current_status = DirectionsOb.workflow_status['audit_wait']
                 auditresult.current_audit_user = auditInfo.next_audit_user
-                # 判断后续是否还有下一级审核人
+                # 判断后续是否还有下下一级审核人
                 audit_users_list = auditInfo.audit_users.split(',')
                 for index, audit_user in enumerate(audit_users_list):
                     if audit_user == auditInfo.next_audit_user:
+                        # 无下下级审核人
                         if index == len(audit_users_list) - 1:
                             auditresult.next_audit_user = '-1'
                             break
+                        # 存在下下级审核人
                         else:
                             auditresult.next_audit_user = audit_users_list[index + 1]
-                auditresult.save(update_fields=['current_audit_user', 'next_audit_user'])
+                auditresult.save(update_fields=['current_audit_user', 'next_audit_user', 'current_status'])
 
             # 插入审核明细数据
             audit_detail_result = WorkflowAuditDetail()
-            audit_detail_result.audit_id = audit_id
+            audit_detail_result.audit_id = WorkflowAudit.objects.get(audit_id=audit_id)
             audit_detail_result.audit_user = audit_user
             audit_detail_result.audit_status = DirectionsOb.workflow_status['audit_success']
             audit_detail_result.audit_time = timezone.now()
@@ -155,7 +158,7 @@ class Workflow(object):
 
             # 插入审核明细数据
             audit_detail_result = WorkflowAuditDetail()
-            audit_detail_result.audit_id = audit_id
+            audit_detail_result.audit_id = WorkflowAudit.objects.get(audit_id=audit_id)
             audit_detail_result.audit_user = audit_user
             audit_detail_result.audit_status = DirectionsOb.workflow_status['audit_reject']
             audit_detail_result.audit_time = timezone.now()
