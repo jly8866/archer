@@ -120,10 +120,10 @@ cd archer && python3 manage.py createsuperuser<br/>
 2.使用命令：patch  python/site-packages/django/contrib/auth/views.py django_1.8.17_admin_secure_archer.patch
 
 ### 已经制作好的docker镜像：
-* 如果不想自己安装上述，可以直接使用做好的docker镜像，安装步骤：
-    1. docker run -p 80:80 -d docker.gaoxiaobang.com/prod/archer    (需要确保docker宿主机80端口能够使用)
-    2. 浏览器直接访问http://宿主机ip:80/ 即可, 初始用户名密码为root/root
-* docker镜像制作感谢@浩气冲天 协助
+* 如果不想自己安装上述，可以直接使用做好的docker镜像，参考wiki：
+    1. inception镜像: https://dev.aliyun.com/detail.html?spm=5176.1972343.2.12.7b475aaaLiCfMf&repoId=142093
+    2. archer镜像: https://dev.aliyun.com/detail.html?spm=5176.1972343.2.38.XtXtLh&repoId=142147
+* docker镜像制作感谢@小圈圈 提供
 
 ### 系统展示截图：
 1. 工单展示页：<br/>
