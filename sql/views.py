@@ -53,61 +53,6 @@ def _getDetailUrl(request):
     host = request.META['HTTP_HOST']
     return "%s://%s/detail/" % (scheme, host)
 
-#SQL工单跳过inception执行回调
-def execute_skipinc_call_back(workflowId , clusterName, sql_content, url):
-    workflowDetail = workflow.objects.get(id=workflowId)
-    # 获取审核人
-    try:
-        listAllReviewMen = json.loads(workflowDetail.review_man)
-    except ValueError:
-        listAllReviewMen = (workflowDetail.review_man,)
-    # 获取集群连接信息
-    masterInfo = getMasterConnStr(clusterName)
-    try:
-        # 执行sql
-        t_start = time.time()
-        execute_result = dao.mysql_execute(masterInfo['masterHost'], masterInfo['masterPort'], masterInfo['masterUser'],
-                                           masterInfo['masterPassword'], sql_content)
-        t_end = time.time()
-        execute_time = "%5s" % "{:.4f}".format(t_end - t_start)
-        execute_result['execute_time'] = execute_time + 'sec'
-
-        workflowDetail = workflow.objects.get(id=workflowId)
-        if execute_result.get('Warning'):
-            workflowDetail.status = Const.workflowStatus['exception']
-        elif execute_result.get('Error'):
-            workflowDetail.status = Const.workflowStatus['exception']
-        else:
-            workflowDetail.status = Const.workflowStatus['finish']
-        workflowDetail.finish_time = timezone.now()
-        workflowDetail.execute_result = json.dumps(execute_result)
-        workflowDetail.is_manual = 1
-        workflowDetail.audit_remark = ''
-        workflowDetail.is_backup = '否'
-        # 重新获取连接，防止超时
-        connection.close()
-        workflowDetail.save()
-    except Exception as e:
-        logger.error(e)
-
-    # 如果执行完毕了，则根据settings.py里的配置决定是否给提交者和DBA一封邮件提醒.DBA需要知晓审核并执行过的单子
-    if getattr(settings, 'MAIL_ON_OFF') == "on":
-        # 给主、副审核人，申请人，DBA各发一封邮件
-        engineer = workflowDetail.engineer
-        reviewMen = workflowDetail.review_man
-        workflowStatus = workflowDetail.status
-        workflowName = workflowDetail.workflow_name
-        objEngineer = users.objects.get(username=engineer)
-        strTitle = "SQL上线工单执行完毕 # " + str(workflowId)
-        strContent = "发起人：" + engineer + "\n审核人：" + reviewMen + "\n工单地址：" + url + "\n工单名称： " + workflowName + "\n执行结果：" + workflowStatus
-        mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
-        mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
-        for reviewMan in listAllReviewMen:
-            if reviewMan == "":
-                continue
-            objReviewMan = users.objects.get(username=reviewMan)
-            mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
-
 #SQL工单执行回调
 def execute_call_back(workflowId , clusterName, url):
     workflowDetail = workflow.objects.get(id=workflowId)
@@ -342,105 +287,6 @@ def detail(request, workflowId):
                'listAllReviewMen':listAllReviewMen,'loginUserOb': loginUserOb}
     return render(request, 'detail.html', context)
 
-#审核通过，不执行
-def passonly(request):
-    workflowId = request.POST['workflowid']
-    if workflowId == '' or workflowId is None:
-        context = {'errMsg': 'workflowId参数为空.'}
-        return render(request, 'error.html', context)
-    workflowId = int(workflowId)
-    workflowDetail = workflow.objects.get(id=workflowId)
-    clusterName = workflowDetail.cluster_name
-    try:
-        listAllReviewMen = json.loads(workflowDetail.review_man)
-    except ValueError:
-        listAllReviewMen = (workflowDetail.review_man, )
-
-    #服务器端二次验证，正在执行人工审核动作的当前登录用户必须为审核人. 避免攻击或被接口测试工具强行绕过
-    loginUser = request.session.get('login_username', False)
-    if loginUser is None or loginUser not in listAllReviewMen:
-        context = {'errMsg': '当前登录用户不是审核人，请重新登录.'}
-        return render(request, 'error.html', context)
-
-    #服务器端二次验证，当前工单状态必须为等待人工审核
-    if workflowDetail.status != Const.workflowStatus['manreviewing']:
-        context = {'errMsg': '当前工单状态不是等待人工审核中，请刷新当前页面！'}
-        return render(request, 'error.html', context)
-
-    #将流程状态修改为审核通过，并更新reviewok_time字段
-    workflowDetail.status = Const.workflowStatus['pass']
-    workflowDetail.reviewok_time = timezone.now()
-    workflowDetail.audit_remark = ''
-    workflowDetail.save()
-
-    #如果执行完毕了，则根据settings.py里的配置决定是否给提交者和DBA一封邮件提醒.DBA需要知晓审核并执行过的单子
-    if getattr(settings, 'MAIL_ON_OFF') == "on":
-        url = _getDetailUrl(request) + str(workflowId) + '/'
-
-        #给主、副审核人，申请人，DBA各发一封邮件
-        engineer = workflowDetail.engineer
-        reviewMen = workflowDetail.review_man
-        workflowStatus = workflowDetail.status
-        workflowName = workflowDetail.workflow_name
-        objEngineer = users.objects.get(username=engineer)
-        strTitle = "SQL上线工单审核通过 # " + str(workflowId)
-        strContent = "发起人：" + engineer + "\n审核人：" + reviewMen + "\n工单地址：" + url + "\n工单名称： " + workflowName +"\n审核结果：" + workflowStatus
-        mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
-        mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
-        for reviewMan in listAllReviewMen:
-            if reviewMan == "":
-                continue
-            objReviewMan = users.objects.get(username=reviewMan)
-            mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
-    else:
-        #不发邮件
-        pass
-
-    return HttpResponseRedirect(reverse('sql:detail', args=(workflowId,)))
-
-
-# 仅执行SQL
-def executeonly(request):
-    workflowId = request.POST['workflowid']
-    if workflowId == '' or workflowId is None:
-        context = {'errMsg': 'workflowId参数为空.'}
-        return render(request, 'error.html', context)
-
-    workflowId = int(workflowId)
-    workflowDetail = workflow.objects.get(id=workflowId)
-    clusterName = workflowDetail.cluster_name
-    url = _getDetailUrl(request) + str(workflowId) + '/'
-
-    try:
-        listAllReviewMen = json.loads(workflowDetail.review_man)
-    except ValueError:
-        listAllReviewMen = (workflowDetail.review_man, )
-
-    #服务器端二次验证，正在执行人工审核动作的当前登录用户必须为审核人或者提交人. 避免攻击或被接口测试工具强行绕过
-    loginUser = request.session.get('login_username', False)
-    if loginUser is None or (loginUser not in listAllReviewMen and loginUser != workflowDetail.engineer):
-        context = {'errMsg': '当前登录用户不是审核人或者提交人，请重新登录.'}
-        return render(request, 'error.html', context)
-
-    #服务器端二次验证，当前工单状态必须为审核通过状态
-    if workflowDetail.status != Const.workflowStatus['pass']:
-        context = {'errMsg': '当前工单状态不是审核通过，请刷新当前页面！'}
-        return render(request, 'error.html', context)
-
-    #将流程状态修改为执行中，并更新reviewok_time字段
-    workflowDetail.status = Const.workflowStatus['executing']
-    workflowDetail.reviewok_time = timezone.now()
-    #执行之前重新split并check一遍，更新SHA1缓存；因为如果在执行中，其他进程去做这一步操作的话，会导致inception core dump挂掉
-    splitReviewResult = inceptionDao.sqlautoReview(workflowDetail.sql_content, workflowDetail.cluster_name, isSplit='yes')
-    workflowDetail.review_content = json.dumps(splitReviewResult)
-    workflowDetail.save()
-
-    # 采取异步回调的方式执行语句，防止出现持续执行中的异常
-    t = Thread(target=execute_call_back, args=(workflowId, clusterName, url))
-    t.start()
-
-    return HttpResponseRedirect(reverse('sql:detail', args=(workflowId,)))
-
 #人工审核也通过，执行SQL
 def execute(request):
     workflowId = request.POST['workflowid']
@@ -480,36 +326,6 @@ def execute(request):
 
     # 采取异步回调的方式执行语句，防止出现持续执行中的异常
     t = Thread(target=execute_call_back, args=(workflowId, clusterName, url))
-    t.start()
-
-    return HttpResponseRedirect(reverse('sql:detail', args=(workflowId,)))
-
-
-# 跳过inception直接执行申请
-@superuser_required
-def execute_skipinc(request):
-    workflowId = request.POST['workflowid']
-
-    # 获取工单信息
-    workflowId = int(workflowId)
-    workflowDetail = workflow.objects.get(id=workflowId)
-    sql_content = workflowDetail.sql_content
-    clusterName = workflowDetail.cluster_name
-    url = _getDetailUrl(request) + str(workflowId) + '/'
-
-    #服务器端二次验证，当前工单状态必须为等待人工审核/审核通过/自动审核不通过
-    if workflowDetail.status not in [Const.workflowStatus['manreviewing'],Const.workflowStatus['pass'],Const.workflowStatus['autoreviewwrong']]:
-        context = {'errMsg': '当前工单状态不是等待人工审核/审核通过/自动审核不通过，请刷新当前页面！'}
-        return render(request, 'error.html', context)
-
-    # 更新工单状态为执行中
-    workflowDetail = workflow.objects.get(id=workflowId)
-    workflowDetail.status = Const.workflowStatus['executing']
-    workflowDetail.reviewok_time = timezone.now()
-    workflowDetail.save()
-
-    # 采取异步回调的方式执行语句，防止出现持续执行中的异常
-    t = Thread(target=execute_skipinc_call_back, args=(workflowId, clusterName, sql_content, url))
     t.start()
 
     return HttpResponseRedirect(reverse('sql:detail', args=(workflowId,)))
