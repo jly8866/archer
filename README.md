@@ -116,8 +116,8 @@ cd archer && python3 manage.py createsuperuser<br/>
 4. settings中以AUTH_LDAP开头的配置，需要根据自己的ldap对应修改<br/>
 
 ### admin后台加固，防暴力破解
-1.patch目录下，名称为：django_1.8.17_admin_secure_archer.patch
-2.使用命令：patch  python/site-packages/django/contrib/auth/views.py django_1.8.17_admin_secure_archer.patch
+* 1.patch目录下，名称为：django_1.8.17_admin_secure_archer.patch
+* 2.使用命令：patch  python/site-packages/django/contrib/auth/views.py django_1.8.17_admin_secure_archer.patch
 
 ### 已经制作好的docker镜像：
 * 如果不想自己安装上述，可以直接使用做好的docker镜像，参考wiki：
