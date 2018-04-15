@@ -4,7 +4,7 @@ cd /opt/archer
 # 切换python运行环境
 source /opt/venv4archer/bin/activate
 #启动ngnix
-/usr/sbin/nginx -g 'daemon off;'
+/usr/sbin/nginx
 
 #收集所有的静态文件到STATIC_ROOT
 python3 manage.py collectstatic -v0 --noinput
