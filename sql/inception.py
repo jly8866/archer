@@ -4,6 +4,7 @@ import re
 import json
 import MySQLdb
 from django.conf import settings
+from django.db import connection
 
 from .models import master_config, slave_config, workflow
 from .aes_decryptor import Prpcrypt
@@ -156,7 +157,12 @@ class InceptionDao(object):
                 tmpList.append(sqlRow)
             # 每执行一次，就将执行结果更新到工单的execute_result，便于获取osc进度时对比
             workflowDetail.execute_result = json.dumps(tmpList)
-            workflowDetail.save()
+            try:
+                workflowDetail.save()
+            except Exception:
+                # 重新获取连接，防止超时
+                connection.close()
+                workflowDetail.save()
 
         #二次加工一下，目的是为了和sqlautoReview()函数的return保持格式一致，便于在detail页面渲染.
         finalStatus = "已正常结束"
@@ -174,23 +180,23 @@ class InceptionDao(object):
         listExecuteResult = json.loads(workflowDetail.execute_result)
         listBackupSql = []
         for row in listExecuteResult:
-            #获取backup_dbname
-            if row[8] == 'None':
-                continue;
-            backupDbName = row[8]
-            sequence = row[7]
-            opidTime = sequence.replace("'", "")
-            sqlTable = "select tablename from %s.$_$Inception_backup_information$_$ where opid_time='%s';" % (backupDbName, opidTime)
-            listTables = self._fetchall(sqlTable, self.inception_remote_backup_host, self.inception_remote_backup_port, self.inception_remote_backup_user, self.inception_remote_backup_password, '')
-            if listTables is None or len(listTables) != 1:
-                print("Error: returned listTables more than 1.")
-
-            tableName = listTables[0][0]
-            sqlBack = "select rollback_statement from %s.%s where opid_time='%s'" % (backupDbName, tableName, opidTime)
-            listBackup = self._fetchall(sqlBack, self.inception_remote_backup_host, self.inception_remote_backup_port, self.inception_remote_backup_user, self.inception_remote_backup_password, '')
-            if listBackup is not None and len(listBackup) !=0:
-                for rownum in range(len(listBackup)):
-                    listBackupSql.append(listBackup[rownum][0])
+            try:
+                #获取backup_dbname
+                if row[8] == 'None':
+                    continue
+                backupDbName = row[8]
+                sequence = row[7]
+                opidTime = sequence.replace("'", "")
+                sqlTable = "select tablename from %s.$_$Inception_backup_information$_$ where opid_time='%s';" % (backupDbName, opidTime)
+                listTables = self._fetchall(sqlTable, self.inception_remote_backup_host, self.inception_remote_backup_port, self.inception_remote_backup_user, self.inception_remote_backup_password, '')
+                tableName = listTables[0][0]
+                sqlBack = "select rollback_statement from %s.%s where opid_time='%s'" % (backupDbName, tableName, opidTime)
+                listBackup = self._fetchall(sqlBack, self.inception_remote_backup_host, self.inception_remote_backup_port, self.inception_remote_backup_user, self.inception_remote_backup_password, '')
+                if listBackup is not None and len(listBackup) != 0:
+                    for rownum in range(len(listBackup)):
+                        listBackupSql.append(listBackup[rownum][0])
+            except Exception:
+                listBackupSql = listBackupSql
         return listBackupSql
 
 
@@ -233,7 +239,7 @@ class InceptionDao(object):
         sqlStr = "inception stop alter '%s'" % sqlSHA1
         result = self._fetchall(sqlStr, self.inception_host, self.inception_port, '', '', '')
         if result is not None:
-            optResult = {"status":0, "msg":"已成功停止OSC进程，请注意清理触发器和临时表", "data":""}
+            optResult = {"status":0, "msg":"已成功停止OSC进程，请注意清理触发器和临时表，先清理触发器再删除临时表", "data":""}
         else:
             optResult = {"status":1, "msg":"ERROR 2624 (HY000):未找到OSC执行进程，可能已经执行完成", "data":""}
         return optResult
@@ -255,6 +261,8 @@ class InceptionDao(object):
                           %s\
                           inception_magic_commit;" % (
             masterUser, masterPassword, masterHost, str(masterPort), dbName, sqlContent)
-        result = self._fetchall(sql, self.inception_host, self.inception_port, '', '', '')
-
+        try:
+            result = self._fetchall(sql, self.inception_host, self.inception_port, '', '', '')
+        except Exception:
+            result = None
         return result

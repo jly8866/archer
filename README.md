@@ -17,12 +17,12 @@ linux : 64位linux操作系统均可
   很多时候DBA并不知道SQL的业务含义，所以人工审核最好由其他研发工程师或研发经理来审核. 这是archer的设计理念.
 * 回滚数据展示<br/>
 * 在线查询<br/>
-  查询权限控制，基于inception解析查询语句，查询权限限制到表级
+  查询权限控制，基于inception解析查询语句，查询权限支持限制到表级<br/>
   查询权限申请、审核和管理，支持审核流程配置<br/>
-  查询结果集限制、查询结果导出、表结构展示、多结果级展示<br/>
+  查询结果集限制、查询结果导出、表结构展示、多结果集展示<br/>
 * 动态脱敏<br/> 
   基于inception解析查询语句，配合脱敏字段配置、脱敏规则(正则表达式)实现动态脱敏<br/>
-* 主库集群配置
+* 主库集群配置<br/>
 * 用户权限配置<br/>
   工程师角色（engineer）与审核角色（review_man）:工程师可以发起SQL上线，在通过了inception自动审核之后，需要由人工审核点击确认才能执行SQL.<br/>
   还有一个特殊的超级管理员即可以上线、审核，又可以登录admin界面进行管理.
@@ -34,7 +34,7 @@ linux : 64位linux操作系统均可
 
 ### 设计规范：
 * 合理的数据库设计和规范很有必要，尤其是MySQL数据库，内核没有oracle、db2、SQL Server等数据库这么强大，需要合理设计，扬长避短。互联网业界有成熟的MySQL设计规范，特此撰写如下。请读者在公司上线使用archer系统之前由专业DBA给所有后端开发人员培训一下此规范，做到知其然且知其所以然。<br/>
-下载链接：  https://github.com/jly8866/archer/raw/master/docs/mysql_db_design_guide.docx
+下载链接：  https://github.com/jly8866/archer/master/src/docs/mysql_db_design_guide.docx
 
 ### 主要配置文件：
 * archer/archer/settings.py<br/>
@@ -50,16 +50,8 @@ cd Python-3.4.1 <br/>
 ./configure --prefix=/path/to/python3 && make && make install
 或者rpm、yum、binary等其他安装方式
 3. 安装所需相关模块：<br/>
-(1)django：<br/>
-tar -xzvf Django-1.8.17 && cd Django-1.8.17 && python3 setup.py install<br/>
-或者pip3 install Django==1.8.17<br/>
-(2)Crypto:<br/>
-pip3 install Crypto<br/>
-pip3 install pycrypto<br/>
-(3)其他模块:<br/>
 pip3 install -r requirements.txt<br/>
 4. 给python3安装MySQLdb模块:<br/>
-pip3 install pymysql<br/>
 记得确保settings.py里有如下两行：<br/>
 import pymysql<br/>
 pymysql.install_as_MySQLdb()<br/>
@@ -82,13 +74,13 @@ python3 manage.py migrate<br/>
 cd archer && python3 manage.py createsuperuser<br/>
 8. 启动，有两种方式：<br/>
 (1)用django内置runserver启动服务,需要修改debug.sh里的ip和port<br/>
-    cd archer && bash debug.sh<br/>
+cd archer && bash debug.sh<br/>
 (2)用gunicorn启动服务，可以使用pip3 install gunicorn安装并用startup.sh启动，但需要配合nginx处理静态资源. (nginx安装这里不做示范)<br/>
     * gunicorn的安装配置示例:
-        * pip3 install gunicorn
 	    * cat startup.sh
             * ![image](https://github.com/jly8866/archer/raw/master/screenshots/startup.png)<br/>
     * nginx配置示例：
+        * 静态资源地址请指定setting.py里面的STATIC_ROOT配置项地址，一般为/archer/static
         * cat nginx.conf
             * ![image](https://github.com/jly8866/archer/raw/master/screenshots/nginx.png)<br/>
 9. 创建archer系统登录用户：<br/>
@@ -102,8 +94,7 @@ cd archer && python3 manage.py createsuperuser<br/>
 这一步是为了进行sql在线查询，所用到的用户名密码、端口等，建议账号仅开放SELECT权限。<br/>
 12. 配置查询权限审核人：<br/>
 使用浏览器访问http://X.X.X.X:port/admin/sql/workflowauditsetting/ ，点击右侧Add 工作流配置<br/>
-这一步是为了添加查询权限审核人，单人审核格式为：user1，多人审核格式为：user1,user2，请正确配置。<br/>
-
+这一步是为了添加查询权限审核人，单人审核格式为：user1，多级审核格式为：user1,user2，请正确配置。<br/>
 13. 正式访问：<br/>
 以上步骤完毕，就可以使用步骤9创建的用户登录archer系统啦, 首页地址 http://X.X.X.X:port/<br/>
 <br/>
@@ -114,6 +105,23 @@ cd archer && python3 manage.py createsuperuser<br/>
 2. 如果使用了ldaps，并且是自签名证书，需要打开settings中AUTH_LDAP_GLOBAL_OPTIONS的注释<br/>
 3. centos需要执行yum install openldap-devel<br/>
 4. settings中以AUTH_LDAP开头的配置，需要根据自己的ldap对应修改<br/>
+
+### 集成SQLAdvisor
+1. 安装SQLAdvisor，[项目地址](https://github.com/Meituan-Dianping/SQLAdvisor)
+2. 修改配置文件SQLADVISOR为程序路径，路径需要完整，如'/opt/SQLAdvisor/sqladvisor/sqladvisor'
+
+### 慢日志管理
+1. 安装percona-toolkit（版本>3.0），以centos为例   
+    yum -y install http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm 
+    yum -y install percona-toolkit.x86_64 
+2. 使用src/script/mysql_slow_query_review.sql创建慢日志收集表
+3. 将src/script/analysis_slow_query.sh部署到各个监控机器，注意按照说明修改配置信息
+4. 如果有阿里云rds实例，可以在后台数据管理模块添加关联关系，可直接拉取rds慢日志
+
+### 集成阿里云rds管理
+1. 修改配置文件ENABLE_ALIYUN=True
+2. 访问http://X.X.X.X:port/admin/sql/aliyunaccesskey/, 添加aliyun账号的accesskey信息，重新启动服务
+3. 访问http://X.X.X.X:port/admin/sql/aliyunrdsconfig/，添加实例id信息即可实现rds进程管理、慢日志管理
 
 ### admin后台加固，防暴力破解
 * 1.patch目录下，名称为：django_1.8.17_admin_secure_archer.patch
@@ -136,12 +144,28 @@ cd archer && python3 manage.py createsuperuser<br/>
 ![image](https://github.com/jly8866/archer/raw/master/screenshots/waitingforme.png)<br/>
 5. 用户登录页：<br/>
 ![image](https://github.com/jly8866/archer/raw/master/screenshots/login.png)<br/>
-6. 用户、集群、工单管理：<br/>
-![image](https://github.com/jly8866/archer/raw/master/screenshots/adminsqlusers.png)<br/>
-7. 工单统计图表：<br/>
-![image](https://github.com/jly8866/archer/raw/master/screenshots/charts.png)<br/><br/>
-8.pt-osc进度条，以及中止pt-osc进程按钮：<br/>
+6. 工单统计图表：<br/>
+![image](https://github.com/jly8866/archer/raw/master/screenshots/charts.png)<br/>
+7. pt-osc进度条，以及中止pt-osc进程按钮：<br/>
 ![image](https://raw.githubusercontent.com/johnliu2008/archer/master/screenshots/osc_progress.png)<br/>
+8. SQL在线查询、自动补全：<br/>
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/query.png)<br/>
+9. 动态脱敏：<br/>
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/datamasking.png)<br/>
+10. SQL在线查询日志：<br/>
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/querylog.png)<br/>
+11. SQL在线查询权限申请：<br/>
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/applyforprivileges.png)<br/>
+12. SQL慢查日志统计：<br/>
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/slowquery.png)<br/>
+13. SQL慢查日志明细：<br/>
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/slowquerylog.png)<br/>
+14. 阿里云RDS进程管理、表空间查询：<br/>
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/process.png)<br/>
+15. SQLAdvisor：<br/>
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/sqladvisor.png)<br/>
+15. 后台数据管理：<br/>
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/admin.png)<br/>
 
 ### 联系方式：
 QQ群：524233225

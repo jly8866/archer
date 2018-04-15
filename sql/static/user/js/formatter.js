@@ -16,6 +16,47 @@ workflow_status = {
     'audit_abort_display': '审核取消'
 };
 
+sqlworkflowStatus = {
+    'finish': '已正常结束',
+    'abort': '人工终止流程',
+    'autoreviewing': '自动审核中',
+    'manreviewing': '等待审核人审核',
+    'pass': '审核通过',
+    'executing': '执行中',
+    'autoreviewwrong': '自动审核不通过',
+    'exception': '执行有异常'
+};
+
+function sqlworkflowStatus_formatter(value) {
+    if (value === sqlworkflowStatus.finish) {
+        return "<span class=\"label label-success\">" + sqlworkflowStatus.finish + "</span>"
+    }
+    else if (value === sqlworkflowStatus.abort) {
+        return "<span class=\"label label-default\">" + sqlworkflowStatus.abort + "</span>"
+    }
+    else if (value === sqlworkflowStatus.autoreviewing) {
+        return "<span class=\"label label-warning\">" + sqlworkflowStatus.autoreviewing + "</span>"
+    }
+    else if (value === sqlworkflowStatus.manreviewing) {
+        return "<span class=\"label label-info\">" + sqlworkflowStatus.manreviewing + "</span>"
+    }
+    else if (value === sqlworkflowStatus.pass) {
+        return "<span class=\"label label-warning\">" + sqlworkflowStatus.pass + "</span>"
+    }
+    else if (value === sqlworkflowStatus.executing) {
+        return "<span class=\"label label-primary\">" + sqlworkflowStatus.executing + "</span>"
+    }
+    else if (value === sqlworkflowStatus.autoreviewwrong) {
+        return "<span class=\"label label-danger\">" + sqlworkflowStatus.autoreviewwrong + "</span>"
+    }
+    else if (value === sqlworkflowStatus.exception) {
+        return "<span class=\"label label-danger\">" + sqlworkflowStatus.exception + "</span>"
+    }
+    else {
+        return "<span class=\"label label-danger\">" + '未知状态' + "</span>"
+    }
+}
+
 function workflow_type_formatter(value) {
     if (value === workflow_type.query) {
         return workflow_type.query_display
@@ -34,5 +75,8 @@ function workflow_status_formatter(value) {
     }
     else if (value === workflow_status.audit_abort) {
         return "<span class='label label-default'>" + workflow_status.audit_abort_display + " </span>"
+    }
+    else {
+        return "<span class=\"label label-danger\">" + '未知状态' + "</span>"
     }
 }
