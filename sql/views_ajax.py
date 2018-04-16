@@ -425,6 +425,8 @@ def sqladvisorcheck(request):
         clusterName = request.POST['cluster_name']
         dbName = request.POST.POST['db_name']
         verbose = request.POST.POST['verbose']
+    if verbose is None:
+        verbose = 1
     finalResult = {'status': 0, 'msg': 'ok', 'data': []}
 
     # 服务器端参数验证
