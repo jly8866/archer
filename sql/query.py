@@ -3,6 +3,7 @@ import re
 import simplejson as json
 
 from django.db.models import Q, Min, F, Sum
+from django.db import connection
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
@@ -623,7 +624,12 @@ def query(request):
             limit_num = min(int(limit_num), int(sql_result['effect_row']))
         query_log.effect_row = limit_num
         query_log.cost_time = cost_time
-        query_log.save()
+        # 防止查询超时
+        try:
+            query_log.save()
+        except:
+            connection.close()
+            query_log.save()
 
     # 返回查询结果
     return HttpResponse(json.dumps(finalResult, cls=DateEncoder), content_type='application/json')
