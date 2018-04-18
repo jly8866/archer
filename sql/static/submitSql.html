@@ -27,7 +27,7 @@
                     <div class="form-group">
                         <select id="cluster_name" name="cluster_name"
                                 class="selectpicker show-tick form-control bs-select-hidden" data-name="要上线的集群"
-                                data-placeholder="请选择要上线的集群:" required>
+                                data-live-search="true" data-placeholder="请选择要上线的集群:" required>
                             <option value="is-empty" disabled="" selected="selected">请选择要上线的集群:</option>
                             {% for cluster_name,dbs in dictAllClusterDb.items %}
                                 <option value="{{ cluster_name }}">{{ cluster_name }}集群 (包含db：
@@ -52,7 +52,7 @@
                     <div class="form-group">
                         <select id="review_man" name="review_man"
                                 class="selectpicker show-tick form-control bs-select-hidden" data-name="审核人"
-                                data-placeholder="请选择RD审核人:" required>
+                                data-live-search="true" data-placeholder="请选择RD审核人:" required>
                             <option value="is-empty" disabled="" selected="selected">请选择审核人:</option>
                             {% for man in reviewMen %}
                                 <option value="{{ man }}">{{ man }}</option>
