@@ -106,7 +106,8 @@ def login(request):
 def logout(request):
     if request.session.get('login_username', False):
         del request.session['login_username']
-    return render(request, 'login.html')
+    return HttpResponseRedirect(reverse('sql:login'))
+
 
 #首页，也是查看所有SQL工单页面，具备翻页功能
 def allworkflow(request):
