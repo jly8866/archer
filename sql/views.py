@@ -195,7 +195,7 @@ def autoreview(request):
     Workflow.status = workflowStatus
     Workflow.is_backup = isBackup
     Workflow.review_content = jsonResult
-    Workflow.cluster_name = master_config.objects.get(cluster_name=clusterName)
+    Workflow.cluster_name = clusterName
     Workflow.sql_content = sqlContent
     Workflow.execute_result = ''
     Workflow.audit_remark = ''

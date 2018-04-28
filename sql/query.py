@@ -411,7 +411,7 @@ def applyforprivileges(request):
             applyinfo = QueryPrivilegesApply()
             applyinfo.title = title
             applyinfo.user_name = loginUser
-            applyinfo.cluster_name = master_config.objects.get(cluster_name=cluster_name)
+            applyinfo.cluster_name = cluster_name
             if int(priv_type) == 1:
                 applyinfo.db_list = ','.join(db_list)
                 applyinfo.table_list = ''
@@ -616,7 +616,7 @@ def query(request):
         query_log = QueryLog()
         query_log.username = loginUser
         query_log.db_name = dbName
-        query_log.cluster_name = slave_info.cluster_name
+        query_log.cluster_name = cluster_name
         query_log.sqllog = sqlContent
         if int(limit_num) == 0:
             limit_num = int(sql_result['effect_row'])
