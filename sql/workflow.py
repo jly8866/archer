@@ -219,7 +219,7 @@ class Workflow(object):
 
     # 获取审核配置信息
     def auditsettings(self,workflow_type=None):
-        if workflow_type:
-            return WorkflowAuditSetting.objects.filter(workflow_type=workflow_type)
-        else:
-            return WorkflowAuditSetting.objects.all()
+        try:
+            return WorkflowAuditSetting.objects.get(workflow_type=workflow_type).audit_users
+        except Exception:
+            return ''
