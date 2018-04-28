@@ -151,6 +151,8 @@ function autoreview() {
                 sessionStorage.setItem('CheckWarningCount', result['CheckWarningCount']);
                 sessionStorage.setItem('CheckErrorCount', result['CheckErrorCount']);
                 $("#inception-result").show();
+                $("#btn-submitsql").removeClass('disabled');
+                $("#btn-submitsql").prop('disabled', false);
             } else {
                 alert("status: " + data.status + "\nmsg: " + data.msg);
             }
