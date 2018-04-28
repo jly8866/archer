@@ -123,17 +123,21 @@ def submitSql(request):
     listAllClusterName = [master.cluster_name for master in masters]
 
     dictAllClusterDb = OrderedDict()
-    #每一个都首先获取主库地址在哪里
-    for clusterName in listAllClusterName:
-        listMasters = master_config.objects.filter(cluster_name=clusterName)
-        #取出该集群的名称以及连接方式，为了后面连进去获取所有databases
-        masterHost = listMasters[0].master_host
-        masterPort = listMasters[0].master_port
-        masterUser = listMasters[0].master_user
-        masterPassword = prpCryptor.decrypt(listMasters[0].master_password)
+    try:
+        #每一个都首先获取主库地址在哪里
+        for clusterName in listAllClusterName:
+            listMasters = master_config.objects.filter(cluster_name=clusterName)
+            #取出该集群的名称以及连接方式，为了后面连进去获取所有databases
+            masterHost = listMasters[0].master_host
+            masterPort = listMasters[0].master_port
+            masterUser = listMasters[0].master_user
+            masterPassword = prpCryptor.decrypt(listMasters[0].master_password)
 
-        listDb = dao.getAlldbByCluster(masterHost, masterPort, masterUser, masterPassword)
-        dictAllClusterDb[clusterName] = listDb
+            listDb = dao.getAlldbByCluster(masterHost, masterPort, masterUser, masterPassword)
+            dictAllClusterDb[clusterName] = listDb
+    except Exception as msg:
+        context = {'errMsg': str(msg)}
+        return render(request, 'error.html', context)
 
     #获取所有审核人
     loginUser = request.session.get('login_username', False)
