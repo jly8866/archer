@@ -97,6 +97,8 @@ def execute_call_back(workflowId, clusterName, url):
 
 # 给定时任务执行sql
 def execute_job(workflowId, url):
+    job_id = Const.workflowJobprefix['sqlreview'] + '-' + str(workflowId)
+    logger.debug('execute_job:' + job_id + ' start')
     workflowDetail = workflow.objects.get(id=workflowId)
     clusterName = workflowDetail.cluster_name
 
@@ -107,7 +109,13 @@ def execute_job(workflowId, url):
     # 将流程状态修改为执行中，并更新reviewok_time字段
     workflowDetail.status = Const.workflowStatus['executing']
     workflowDetail.reviewok_time = timezone.now()
-    workflowDetail.save()
+    try:
+        workflowDetail.save()
+    except Exception:
+        # 关闭后重新获取连接，防止超时
+        connection.close()
+        workflowDetail.save()
+    logger.debug('execute_job:' + job_id + ' executing')
     # 执行之前重新split并check一遍，更新SHA1缓存；因为如果在执行中，其他进程去做这一步操作的话，会导致inception core dump挂掉
     splitReviewResult = inceptionDao.sqlautoReview(workflowDetail.sql_content, workflowDetail.cluster_name,
                                                    isSplit='yes')
