@@ -14,15 +14,17 @@ function validate() {
 
 
 $("#btn-autoreview").click(function () {
+    $('input[type=button]').addClass('disabled');
+    $('input[type=button]').prop('disabled', true);
     //先做表单验证，成功了提交ajax给后端
     if (validate()) {
-        $('#btn-autoreview').addClass('disabled');
-        $('#btn-autoreview').prop('disabled', true);
         autoreview();
     }
     else {
-        $('#btn-autoreview').removeClass('disabled');
-        $('#btn-autoreview').prop('disabled', false);
+        $("#btn-format").removeClass('disabled');
+        $("#btn-format").prop('disabled', false);
+        $("#btn-autoreview").removeClass('disabled');
+        $("#btn-autoreview").prop('disabled', false);
     }
 });
 
@@ -40,8 +42,10 @@ function autoreview() {
             cluster_name: clusterName.val()
         },
         complete: function () {
-            $('input[type=button]').removeClass('disabled');
-            $('input[type=button]').prop('disabled', false);
+            $("#btn-format").removeClass('disabled');
+            $("#btn-format").prop('disabled', false);
+            $("#btn-autoreview").removeClass('disabled');
+            $("#btn-autoreview").prop('disabled', false);
         },
         success: function (data) {
             if (data.status === 0) {
@@ -149,8 +153,10 @@ function autoreview() {
                 sessionStorage.setItem('CheckWarningCount', result['CheckWarningCount']);
                 sessionStorage.setItem('CheckErrorCount', result['CheckErrorCount']);
                 $("#inception-result").show();
+                $("#btn-submitsql").removeClass('disabled');
+                $("#btn-submitsql").prop('disabled', false);
             } else {
-                alert("status: " + data.status + "\nmsg: " + data.msg + data.data);
+                alert("status: " + data.status + "\nmsg: " + data.msg);
             }
         },
         error: function (XMLHttpRequest, textStatus, errorThrown) {

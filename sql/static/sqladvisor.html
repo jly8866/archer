@@ -19,7 +19,7 @@
                     <div class="form-group">
                         <select id="cluster_name" name="cluster_name"
                                 class="selectpicker show-tick form-control bs-select-hidden" data-live-search="true"
-                                data-placeholder="请选择集群:" required>
+                                data-live-search="true" data-placeholder="请选择集群:" required>
                             <option value="is-empty" disabled="" selected="selected">请选择集群:</option>
                             {% for cluster_name in listAllClusterName %}
                                 {% if cluster_name != 'mycat' %}

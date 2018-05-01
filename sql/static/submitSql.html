@@ -7,7 +7,7 @@
             <form id="form-submitsql" action="/autoreview/" method="post" class="form-horizontal" role="form">
                 {% csrf_token %}
                 <input type="hidden" id="workflowid" name="workflowid"/>
-                <div class="col-md-8 column">
+                <div class="col-md-9 column">
                     <pre id="sql_content_editor" style="min-height:400px"></pre>
                 </div>
                 <div style="display: none" class="col-md-8 column">
@@ -16,7 +16,7 @@
                               required></textarea>
                 </div>
 
-                <div class="col-md-4 column">
+                <div class="col-md-3 column">
                     <div class="form-group">
                         <input id="sql-upload" name="sql-upload" accept=".sql" type="file" class="file-loading">
                     </div>
@@ -27,7 +27,7 @@
                     <div class="form-group">
                         <select id="cluster_name" name="cluster_name"
                                 class="selectpicker show-tick form-control bs-select-hidden" data-name="要上线的集群"
-                                data-placeholder="请选择要上线的集群:" required>
+                                data-live-search="true" data-placeholder="请选择要上线的集群:" required>
                             <option value="is-empty" disabled="" selected="selected">请选择要上线的集群:</option>
                             {% for cluster_name,dbs in dictAllClusterDb.items %}
                                 <option value="{{ cluster_name }}">{{ cluster_name }}集群 (包含db：
@@ -52,7 +52,7 @@
                     <div class="form-group">
                         <select id="review_man" name="review_man"
                                 class="selectpicker show-tick form-control bs-select-hidden" data-name="审核人"
-                                data-placeholder="请选择RD审核人:" required>
+                                data-live-search="true" data-placeholder="请选择RD审核人:" required>
                             <option value="is-empty" disabled="" selected="selected">请选择审核人:</option>
                             {% for man in reviewMen %}
                                 <option value="{{ man }}">{{ man }}</option>
@@ -92,8 +92,9 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <input type="button" id="btn-autoreview" class="btn btn-danger btn-lg" value="SQL检测"/>
-                        <button type="reset" id="btn-reset" class="btn btn-warning">清空选项</button>
+                        <input id="btn-format" type="button" class="btn btn-info" value="美化"/>
+                        <input type="button" id="btn-autoreview" class="btn btn-danger" value="SQL检测"/>
+                        {#                        <button type="reset" id="btn-reset" class="btn btn-warning">清空选项</button>#}
                         <input id="btn-submitsql" type="button" class="btn btn-success" value="SQL提交"/>
                     </div>
                 </div>
@@ -141,6 +142,7 @@
     <script src="{% static 'crypto-js-3.1.9/enc-base64.min.js' %}"></script>
     <script src="{% static 'crypto-js-3.1.9/enc-utf8.min.js' %}"></script>
     <script src="{% static 'user/js/autoreview.js' %}"></script>
+    <script src="{% static 'dist/js/sql-formatter.min.js' %}"></script>
 
     <!--upload -->
     <script>
@@ -150,7 +152,7 @@
                 language: 'zh',
                 allowedFileExtensions: ['sql'],//接收的文件后缀
                 showCaption: true,//是否显示标题
-                initialCaption:'仅支持后缀名为sql的文件',
+                initialCaption: '仅支持后缀名为sql的文件',
                 showUpload: false,     //不显示上传按钮
                 showPreview: false    // 不显示预览,
             }).on('fileloaded', function () {
@@ -197,7 +199,7 @@
                 dataType: "json",
                 data: {
                     cluster_name: $("#cluster_name").val(),
-                    is_master: 1
+                    is_master: true
                 },
                 complete: function () {
                 },
@@ -247,6 +249,22 @@
             );
             return result;
         }
+
+        //格式化sql
+        $("#btn-format").click(function () {
+                var select_sqlContent = editor.session.getTextRange(editor.getSelectionRange());
+                if (select_sqlContent) {
+                    var sqlContent = select_sqlContent
+                }
+                else {
+                    var sqlContent = editor.getValue();
+
+                }
+                var sqlContent = window.sqlFormatter.format(sqlContent);
+                editor.setValue(sqlContent);
+                editor.clearSelection();
+            }
+        );
 
         $("#btn-submitsql").click(function () {
             //获取form对象，判断输入，通过则提交
