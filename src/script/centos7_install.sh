@@ -2,7 +2,7 @@
 DIR="$( cd "$( dirname "$0"  )" && pwd  )"
 cd $DIR
 git clone -b github https://github.com/hhyo/archer.git \
-&& yum -y install unzip git gcc gcc-c++ make cmake bison openssl-devel mysql-devel openldap-devel \
+&& yum -y install gcc gcc-c++ make cmake bison openssl-devel mysql-devel \
 && yum -y install epel-release \
 && yum -y install python34 python34-pip python34-devel.x86_64 \
 && pip3 install virtualenv -i https://mirrors.ustc.edu.cn/pypi/web/simple/ \
