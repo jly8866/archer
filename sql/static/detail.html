@@ -141,14 +141,6 @@
 
     {% elif workflowDetail.status == '审核通过' %}
         {% if loginUser == workflowDetail.engineer %}
-            <!--审核通过后提交人也可以执行SQL-->
-            <form id="from-execute" action="/execute/" method="post" style="display:inline-block;">
-                {% csrf_token %}
-                <input type="hidden" name="workflowid" value="{{ workflowDetail.id }}">
-                <input type="button" id="btnExecute" class="btn btn-danger"
-                       value="立即执行"/>
-            </form>
-            <input type="button" class="btn btn-info" data-toggle="modal" data-target="#cronComfirm" value="定时执行"/>
             <form id="form-cancel" action="/cancel/" method="post" style="display:inline-block;">
                 {% csrf_token %}
                 <input type="hidden" name="workflowid" value="{{ workflowDetail.id }}">
@@ -156,7 +148,7 @@
                 <input type="submit" onclick="loading(this)" class="btn btn-default" value="终止流程"/>
             </form>
 
-        {% elif loginUser in listAllReviewMen %}
+        {% elif loginUserOb.role == 'DBA' %}
             <textarea id="remark" name="remark" class="form-control" data-name="审核备注"
                       placeholder="请填写驳回原因" rows=3></textarea>
             <br>
@@ -178,8 +170,6 @@
 
     {% elif workflowDetail.status == '定时执行' %}
         {% if loginUser == workflowDetail.engineer %}
-            <!--审核通过后提交人也可以定时执行SQL-->
-            <input type="button" class="btn btn-info" data-toggle="modal" data-target="#cronComfirm" value="执行时间变更"/>
             <form id="form-cancel" action="/cancel/" method="post" style="display:inline-block;">
                 {% csrf_token %}
                 <input type="hidden" name="workflowid" value="{{ workflowDetail.id }}">
@@ -187,7 +177,7 @@
                 <input type="submit" onclick="loading(this)" class="btn btn-default" value="终止流程"/>
             </form>
 
-        {% elif loginUser in listAllReviewMen %}
+        {% elif loginUserOb.role == 'DBA' %}
             <textarea id="remark" name="remark" class="form-control" data-name="审核备注"
                       placeholder="请填写驳回原因" rows=3></textarea>
             <br>

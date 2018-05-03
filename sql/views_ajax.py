@@ -41,11 +41,13 @@ sqlSHA1_cache = {}  # 存储SQL文本与SHA1值的对应关系，尽量减少与
 workflowOb = Workflow()
 
 
+# 登录失败邮件推送给DBA
 def log_mail_record(login_failed_message):
-    mail_title = 'login inception'
+    mail_title = 'login archer'
     logger.warning(login_failed_message)
+    dbaAddr = [email['email'] for email in users.objects.filter(role='DBA').values('email')]
     if getattr(settings, 'MAIL_ON_OFF') == "on":
-        mailSender.sendEmail(mail_title, login_failed_message, getattr(settings, 'MAIL_REVIEW_SECURE_ADDR'))
+        mailSender.sendEmail(mail_title, login_failed_message, dbaAddr)
 
 
 # ajax接口，登录页面调用，用来验证用户名密码
@@ -159,7 +161,7 @@ def sqlworkflow(request):
 
     # 全部工单里面包含搜索条件,待审核前置
     if navStatus == 'all':
-        if loginUserOb.is_superuser == 1:
+        if loginUserOb.is_superuser == 1 or loginUserOb.role == 'DBA':
             listWorkflow = workflow.objects.filter(
                 Q(engineer__contains=search) | Q(workflow_name__contains=search)
             ).order_by('-create_time')[offset:limit].values("id", "workflow_name", "engineer", "status",

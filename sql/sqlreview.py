@@ -88,13 +88,11 @@ def execute_call_back(workflowId, clusterName, url):
             objEngineer = users.objects.get(username=engineer)
             strTitle = "SQL上线工单执行完毕 # " + str(workflowId)
             strContent = "发起人：" + engineer + "\n审核人：" + reviewMen + "\n工单地址：" + url + "\n工单名称： " + workflowName + "\n执行结果：" + workflowStatus
-            mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
-            mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
-            for reviewMan in listAllReviewMen:
-                if reviewMan == "":
-                    continue
-                objReviewMan = users.objects.get(username=reviewMan)
-                mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
+            reviewManAddr = [email['email'] for email in
+                             users.objects.filter(username__in=listAllReviewMen).values('email')]
+            dbaAddr = [email['email'] for email in users.objects.filter(role='DBA').values('email')]
+            listCcAddr = reviewManAddr + dbaAddr
+            mailSender.sendEmail(strTitle, strContent, [objEngineer.email], listCcAddr=listCcAddr)
 
 
 # 给定时任务执行sql

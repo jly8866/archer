@@ -21,6 +21,7 @@ from .inception import InceptionDao
 from .aes_decryptor import Prpcrypt
 from .models import users, master_config, AliyunRdsConfig, workflow, slave_config, QueryPrivileges
 from .workflow import Workflow
+from .permission import role_required, superuser_required
 import logging
 
 logger = logging.getLogger('default')
@@ -78,8 +79,7 @@ def submitSql(request):
 
     # 获取所有审核人，当前登录用户不可以审核
     loginUser = request.session.get('login_username', False)
-    reviewMen = users.objects.filter(role='审核人').exclude(username=loginUser)
-    listAllReviewMen = [user.username for user in reviewMen]
+    reviewMen = users.objects.filter(role__in=['审核人', 'DBA']).exclude(username=loginUser)
 
     context = {'currentMenu': 'submitsql', 'dictAllClusterDb': dictAllClusterDb, 'reviewMen': reviewMen}
     return render(request, 'submitSql.html', context)
@@ -157,14 +157,11 @@ def autoreview(request):
 
                 # 发一封邮件
                 strTitle = "新的SQL上线工单提醒 # " + str(workflowId)
-                objEngineer = users.objects.get(username=engineer)
-                for reviewMan in listAllReviewMen:
-                    if reviewMan == "":
-                        continue
-                    strContent = "发起人：" + engineer + "\n审核人：" + str(
-                        listAllReviewMen) + "\n工单地址：" + url + "\n工单名称： " + workflowName + "\n具体SQL：" + sqlContent
-                    objReviewMan = users.objects.get(username=reviewMan)
-                    mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
+                strContent = "发起人：" + engineer + "\n审核人：" + str(
+                    listAllReviewMen) + "\n工单地址：" + url + "\n工单名称： " + workflowName + "\n具体SQL：" + sqlContent
+                reviewManAddr = [email['email'] for email in
+                                 users.objects.filter(username__in=listAllReviewMen).values('email')]
+                mailSender.sendEmail(strTitle, strContent, reviewManAddr)
             else:
                 # 不发邮件
                 pass
@@ -245,6 +242,7 @@ def detail(request, workflowId):
 
 
 # 审核通过，不执行
+@role_required(('工程师', 'DBA',))
 def passed(request):
     workflowId = request.POST['workflowid']
     if workflowId == '' or workflowId is None:
@@ -286,18 +284,17 @@ def passed(request):
             objEngineer = users.objects.get(username=engineer)
             strTitle = "SQL上线工单审核通过 # " + str(workflowId)
             strContent = "发起人：" + engineer + "\n审核人：" + reviewMen + "\n工单地址：" + url + "\n工单名称： " + workflowName + "\n审核结果：" + workflowStatus
-            mailSender.sendEmail(strTitle, strContent, [objEngineer.email])
-            mailSender.sendEmail(strTitle, strContent, getattr(settings, 'MAIL_REVIEW_DBA_ADDR'))
-            for reviewMan in listAllReviewMen:
-                if reviewMan == "":
-                    continue
-                objReviewMan = users.objects.get(username=reviewMan)
-                mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
+            reviewManAddr = [email['email'] for email in
+                             users.objects.filter(username__in=listAllReviewMen).values('email')]
+            dbaAddr = [email['email'] for email in users.objects.filter(role='DBA').values('email')]
+            listCcAddr = reviewManAddr + dbaAddr
+            mailSender.sendEmail(strTitle, strContent, [objEngineer.email], listCcAddr=listCcAddr)
 
     return HttpResponseRedirect(reverse('sql:detail', args=(workflowId,)))
 
 
 # 执行SQL
+@role_required(('DBA',))
 def execute(request):
     workflowId = request.POST['workflowid']
     if workflowId == '' or workflowId is None:
@@ -308,17 +305,6 @@ def execute(request):
     workflowDetail = workflow.objects.get(id=workflowId)
     clusterName = workflowDetail.cluster_name
     url = getDetailUrl(request) + str(workflowId) + '/'
-
-    try:
-        listAllReviewMen = json.loads(workflowDetail.review_man)
-    except ValueError:
-        listAllReviewMen = (workflowDetail.review_man,)
-
-    # 服务器端二次验证，正在执行人工审核动作的当前登录用户必须为审核人或者提交人. 避免攻击或被接口测试工具强行绕过
-    loginUser = request.session.get('login_username', False)
-    if loginUser is None or (loginUser not in listAllReviewMen and loginUser != workflowDetail.engineer):
-        context = {'errMsg': '当前登录用户不是审核人或者提交人，请重新登录.'}
-        return render(request, 'error.html', context)
 
     # 服务器端二次验证，当前工单状态必须为审核通过状态
     if workflowDetail.status != Const.workflowStatus['pass']:
@@ -351,6 +337,7 @@ def execute(request):
 
 
 # 定时执行SQL
+@role_required(('DBA',))
 def timingtask(request):
     workflowId = request.POST.get('workflowid')
     run_date = request.POST.get('run_date')
@@ -368,17 +355,6 @@ def timingtask(request):
     run_date = datetime.datetime.strptime(run_date, "%Y-%m-%d %H:%M:%S")
     url = getDetailUrl(request) + str(workflowId) + '/'
     job_id = Const.workflowJobprefix['sqlreview'] + '-' + str(workflowId)
-
-    try:
-        listAllReviewMen = json.loads(workflowDetail.review_man)
-    except ValueError:
-        listAllReviewMen = (workflowDetail.review_man,)
-
-    # 服务器端二次验证，正在执行定时执行SQL动作的当前登录用户必须为审核人或者提交人. 避免攻击或被接口测试工具强行绕过
-    loginUser = request.session.get('login_username', False)
-    if loginUser is None or (loginUser not in listAllReviewMen and loginUser != workflowDetail.engineer):
-        context = {'errMsg': '当前登录用户不是审核人或者提交人，请重新登录.'}
-        return render(request, 'error.html', context)
 
     # 使用事务保持数据一致性
     try:
@@ -446,11 +422,9 @@ def cancel(request):
             if loginUser == engineer:
                 strTitle = "发起人主动终止SQL上线工单流程 # " + str(workflowId)
                 strContent = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName + "\n执行结果：" + workflowStatus + "\n提醒：发起人主动终止流程"
-                for reviewMan in listAllReviewMen:
-                    if reviewMan == "":
-                        continue
-                    objReviewMan = users.objects.get(username=reviewMan)
-                    mailSender.sendEmail(strTitle, strContent, [objReviewMan.email])
+                reviewManAddr = [email['email'] for email in
+                                 users.objects.filter(username__in=listAllReviewMen).values('email')]
+                mailSender.sendEmail(strTitle, strContent, [reviewManAddr])
             else:
                 objEngineer = users.objects.get(username=engineer)
                 strTitle = "SQL上线工单被拒绝执行 # " + str(workflowId)
