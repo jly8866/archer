@@ -116,7 +116,7 @@
                       placeholder="请填写驳回原因" rows=3></textarea>
             <br>
 
-            <form action="/passonly/" method="post" style="display:inline-block;">
+            <form action="/passed/" method="post" style="display:inline-block;">
                 {% csrf_token %}
                 <input type="hidden" name="workflowid" value="{{ workflowDetail.id }}">
                 <input type="submit" id="btnPass" onclick="loading(this)" class="btn btn-danger"
@@ -167,7 +167,7 @@
                 <input type="button" id="btnExecute" class="btn btn-danger"
                        value="立即执行"/>
             </form>
-
+            <input type="button" class="btn btn-info" data-toggle="modal" data-target="#cronComfirm" value="定时执行"/>
             <form id="form-cancel" action="/cancel/" method="post" style="display:inline-block;">
                 {% csrf_token %}
                 <input type="hidden" name="workflowid" value="{{ workflowDetail.id }}">
@@ -223,7 +223,7 @@
         {% endif %}
     {% endif %}
     <!-- 定时执行弹出框 -->
-    <form id="from-addsqlcronjob" action="/add_sqlcronjob/" method="post" style="display:inline-block;">
+    <form id="from-addsqlcronjob" action="/timingtask/" method="post" style="display:inline-block;">
         <div class="modal fade" id="cronComfirm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">

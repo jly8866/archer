@@ -1,18 +1,18 @@
-# -*- coding: UTF-8 -*- 
-
+# -*- coding: UTF-8 -*-
+import datetime
 import re
 import json
 from threading import Thread
 from collections import OrderedDict
 
-from django.db import connection
+from django.db import connection, transaction
 from django.utils import timezone
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.core.urlresolvers import reverse
 
-from sql.jobs import job_info, del_sqlcronjob
+from sql.jobs import job_info, add_sqlcronjob, del_sqlcronjob
 from sql.sqlreview import getDetailUrl, execute_call_back
 from .dao import Dao
 from .const import Const, WorkflowDict
@@ -76,9 +76,9 @@ def submitSql(request):
         context = {'errMsg': str(msg)}
         return render(request, 'error.html', context)
 
-    # 获取所有审核人
+    # 获取所有审核人，当前登录用户不可以审核
     loginUser = request.session.get('login_username', False)
-    reviewMen = users.objects.filter(role='审核人')
+    reviewMen = users.objects.filter(role='审核人').exclude(username=loginUser)
     listAllReviewMen = [user.username for user in reviewMen]
 
     context = {'currentMenu': 'submitsql', 'dictAllClusterDb': dictAllClusterDb, 'reviewMen': reviewMen}
@@ -190,7 +190,7 @@ def detail(request, workflowId):
     loginUserOb = users.objects.get(username=loginUser)
 
     # 获取定时执行任务信息
-    if workflowDetail.status == Const.workflowStatus['tasktiming']:
+    if workflowDetail.status == Const.workflowStatus['timingtask']:
         job_id = Const.workflowJobprefix['sqlreview'] + '-' + str(workflowId)
         job = job_info(job_id)
         if job:
@@ -245,7 +245,7 @@ def detail(request, workflowId):
 
 
 # 审核通过，不执行
-def passonly(request):
+def passed(request):
     workflowId = request.POST['workflowid']
     if workflowId == '' or workflowId is None:
         context = {'errMsg': 'workflowId参数为空.'}
@@ -350,6 +350,50 @@ def execute(request):
     return HttpResponseRedirect(reverse('sql:detail', args=(workflowId,)))
 
 
+# 定时执行SQL
+def timingtask(request):
+    workflowId = request.POST.get('workflowid')
+    run_date = request.POST.get('run_date')
+    if run_date is None or workflowId is None:
+        context = {'errMsg': '时间不能为空'}
+        return render(request, 'error.html', context)
+    elif run_date < datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'):
+        context = {'errMsg': '时间不能小于当前时间'}
+        return render(request, 'error.html', context)
+    workflowDetail = workflow.objects.get(id=workflowId)
+    if workflowDetail.status not in [Const.workflowStatus['pass'], Const.workflowStatus['timingtask']]:
+        context = {'errMsg': '必须为审核通过或者定时执行状态'}
+        return render(request, 'error.html', context)
+
+    run_date = datetime.datetime.strptime(run_date, "%Y-%m-%d %H:%M:%S")
+    url = getDetailUrl(request) + str(workflowId) + '/'
+    job_id = Const.workflowJobprefix['sqlreview'] + '-' + str(workflowId)
+
+    try:
+        listAllReviewMen = json.loads(workflowDetail.review_man)
+    except ValueError:
+        listAllReviewMen = (workflowDetail.review_man,)
+
+    # 服务器端二次验证，正在执行定时执行SQL动作的当前登录用户必须为审核人或者提交人. 避免攻击或被接口测试工具强行绕过
+    loginUser = request.session.get('login_username', False)
+    if loginUser is None or (loginUser not in listAllReviewMen and loginUser != workflowDetail.engineer):
+        context = {'errMsg': '当前登录用户不是审核人或者提交人，请重新登录.'}
+        return render(request, 'error.html', context)
+
+    # 使用事务保持数据一致性
+    try:
+        with transaction.atomic():
+            # 将流程状态修改为定时执行
+            workflowDetail.status = Const.workflowStatus['timingtask']
+            workflowDetail.save()
+            # 调用添加定时任务
+            add_sqlcronjob(job_id, run_date, workflowId, url)
+    except Exception as msg:
+        context = {'errMsg': msg}
+        return render(request, 'error.html', context)
+    return HttpResponseRedirect(reverse('sql:detail', args=(workflowId,)))
+
+
 # 终止流程
 def cancel(request):
     workflowId = request.POST['workflowid']
@@ -383,7 +427,7 @@ def cancel(request):
         return HttpResponseRedirect(reverse('sql:detail', args=(workflowId,)))
 
     # 删除定时执行job
-    if workflowDetail.status == Const.workflowStatus['tasktiming']:
+    if workflowDetail.status == Const.workflowStatus['timingtask']:
         job_id = Const.workflowJobprefix['sqlreview'] + '-' + str(workflowId)
         del_sqlcronjob(job_id)
     # 将流程状态修改为人工终止流程

@@ -24,8 +24,10 @@ from .models import users, master_config, slave_config, QueryPrivilegesApply, Qu
 from .data_masking import Masking
 from .workflow import Workflow
 from .permission import role_required, superuser_required
-from .aliyun_function import slowquery_review as aliyun_rds_slowquery_review, \
-    slowquery_review_history as aliyun_rds_slowquery_review_history
+
+if settings.ALIYUN_RDS_MANAGE:
+    from .aliyun_function import slowquery_review as aliyun_rds_slowquery_review, \
+        slowquery_review_history as aliyun_rds_slowquery_review_history
 
 dao = Dao()
 prpCryptor = Prpcrypt()
@@ -326,7 +328,6 @@ def getColumnNameList(request):
             result['status'] = 1
             result['msg'] = str(msg)
     return HttpResponse(json.dumps(result), content_type='application/json')
-
 
 
 # 获取查询权限申请列表
@@ -769,9 +770,10 @@ def slowquery_review(request):
     # 判断是RDS还是其他实例
     cluster_info = master_config.objects.get(cluster_name=cluster_name)
     try:
-        rds_dbinstanceid = cluster_info.aliyunrdsconfig.rds_dbinstanceid
-        # 调用阿里云慢日志接口
-        result = aliyun_rds_slowquery_review(request)
+        if settings.ALIYUN_RDS_MANAGE:
+            rds_dbinstanceid = cluster_info.aliyunrdsconfig.rds_dbinstanceid
+            # 调用阿里云慢日志接口
+            result = aliyun_rds_slowquery_review(request)
     except Exception:
         StartTime = request.POST.get('StartTime')
         EndTime = request.POST.get('EndTime')
@@ -875,9 +877,10 @@ def slowquery_review_history(request):
     # 判断是RDS还是其他实例
     cluster_info = master_config.objects.get(cluster_name=cluster_name)
     try:
-        rds_dbinstanceid = cluster_info.aliyunrdsconfig.rds_dbinstanceid
-        # 调用阿里云慢日志接口
-        result = aliyun_rds_slowquery_review_history(request)
+        if settings.ALIYUN_RDS_MANAGE:
+            rds_dbinstanceid = cluster_info.aliyunrdsconfig.rds_dbinstanceid
+            # 调用阿里云慢日志接口
+            result = aliyun_rds_slowquery_review_history(request)
     except Exception:
         StartTime = request.POST.get('StartTime')
         EndTime = request.POST.get('EndTime')

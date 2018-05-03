@@ -59,6 +59,7 @@ def execute_call_back(workflowId, clusterName, url):
     dictConn = getMasterConnStr(clusterName)
     try:
         # 交给inception先split，再执行
+        logger.debug('execute_call_back:' + str(workflowId) + ' executing')
         (finalStatus, finalList) = inceptionDao.executeFinal(workflowDetail, dictConn)
 
         # 封装成JSON格式存进数据库字段里
@@ -72,6 +73,7 @@ def execute_call_back(workflowId, clusterName, url):
         # 重新获取连接，防止超时
         connection.close()
         workflowDetail.save()
+        logger.debug('execute_call_back:' + str(workflowId) + ' finish')
     except Exception as e:
         logger.error(e)
 
@@ -103,7 +105,7 @@ def execute_job(workflowId, url):
     clusterName = workflowDetail.cluster_name
 
     # 服务器端二次验证，当前工单状态必须为定时执行过状态
-    if workflowDetail.status != Const.workflowStatus['tasktiming']:
+    if workflowDetail.status != Const.workflowStatus['timingtask']:
         raise Exception('工单不是定时执行状态')
 
     # 将流程状态修改为执行中，并更新reviewok_time字段

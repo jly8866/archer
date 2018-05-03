@@ -803,7 +803,7 @@
             if (!$menu.data('height')) $menu.data('height', $menu.height());
             getHeight = $menu.data('height');
           } else {
-            getHeight = $menu.height();
+            //getHeight = $menu.height();
           }
 
           if (that.options.dropupAuto) {
