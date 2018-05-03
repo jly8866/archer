@@ -424,7 +424,7 @@ def cancel(request):
                 strContent = "发起人：" + engineer + "\n审核人：" + reviewMan + "\n工单地址：" + url + "\n工单名称： " + workflowName + "\n执行结果：" + workflowStatus + "\n提醒：发起人主动终止流程"
                 reviewManAddr = [email['email'] for email in
                                  users.objects.filter(username__in=listAllReviewMen).values('email')]
-                mailSender.sendEmail(strTitle, strContent, [reviewManAddr])
+                mailSender.sendEmail(strTitle, strContent, reviewManAddr)
             else:
                 objEngineer = users.objects.get(username=engineer)
                 strTitle = "SQL上线工单被拒绝执行 # " + str(workflowId)
