@@ -33,7 +33,15 @@
   基于percona-toolkit的pt_query_digest分析和存储慢日志，并在web端展现  
 * 邮件通知  
   可配置邮件提醒，对上线申请、权限申请、审核结果等进行通知  
-  对异常登录进行通知  
+  对异常登录进行通知
+* 主库集群配置
+* 用户权限配置
+  工程师角色（engineer）与审核角色（review_man）:工程师可以发起SQL上线，在通过了inception自动审核之后，需要由人工审核点击确认才能执行SQL.<br/>
+  还有一个特殊的超级管理员即可以上线、审核，又可以登录admin界面进行管理
+* 历史工单管理，查看、修改、删除
+* 可通过django admin进行匹配SQL关键字的工单搜索
+* 发起SQL上线，可配置的邮件提醒审核人进行审核
+* 在发起SQL上线前，自助SQL审核，给出建议
 
 ### 设计规范
 * 合理的数据库设计和规范很有必要，尤其是MySQL数据库，内核没有oracle、db2、SQL Server等数据库这么强大，需要合理设计，扬长避短。互联网业界有成熟的MySQL设计规范，特此撰写如下。请读者在公司上线使用archer系统之前由专业DBA给所有后端开发人员培训一下此规范，做到知其然且知其所以然。  
@@ -54,15 +62,21 @@
 
 ### 手动安装步骤
 1. 环境准备：  
-(1)克隆代码到本地  
-`git clone git@github.com:jly8866/archer.git`  
+(1)克隆代码到本地或者下载zip包
+`git clone https://github.com/jly8866/archer.git`
 (2)安装inception，[项目地址](http://mysql-inception.github.io/inception-document/install/)  
-2. 安装python3，版本号>=3.4：(由于需要修改官方模块，请使用virtualenv或venv等单独隔离环境！)  
+2. 安装python3，版本号>=3.4：(由于需要修改官方模块，请使用virtualenv或venv等单独隔离环境！)
 3. 安装所需相关模块：  
-`pip3 install -r requirements.txt`  
-centos如果安装ladp报错需要执行yum install openldap-devel，其他系统请自行查找解决方案，如果不需要集成ladp也可以不安装  
-4. MySQLdb模块兼容inception版本信息:  
-使用src/docker/pymysql目录下的文件替换/path/to/python3/lib/python3.4/site-packages/pymysql/目录下的文件
+`pip3 install -r requirements.txt`
+为了自动构建docker镜像，requirements.txt的包是完整的依赖包，用户可按照说明进行选择性安装
+4. MySQLdb模块兼容inception版本信息
+由于python3使用的pymysql模块里并未兼容inception返回的server信息，因此需要编辑/pymysql/connections.py
+在if int(self.server_version.split('.', 1)[0]) >= 5: 这一行之前加上以下这一句并保存，记得别用tab键用4个空格缩进：
+self.server_version = '5.6.24-72.2-log'
+最后看起来像这样：
+![image](https://github.com/jly8866/archer/raw/master/screenshots/pymysql.png)
+
+或者可以直接使用src/docker/pymysql目录下的文件替换/path/to/python3/lib/python3.4/site-packages/pymysql/对应文件即可
 
 ### 启动前准备
 1. 创建archer本身的数据库表：  
