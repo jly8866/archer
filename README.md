@@ -238,11 +238,11 @@ QQ群：524233225
 
 ### 部分小问题解决办法：
 1. 报错：  
-![image](https://github.com/jly8866/archer/blob/master/src/screenshots/bugs/bug1.png)&nbsp;
-![image](https://github.com/jly8866/archer/blob/master/src/screenshots/bugs/bug2.png)
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug1.png)&nbsp;
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug2.png)
 原因：python3的pymysql模块会向inception发送SHOW WARNINGS语句，导致inception返回一个"Must start as begin statement"错误被archer捕捉到报在日志里.  
 解决：如果实在忍受不了，请修改/path/to/python3/lib/python3.4/site-packages/pymysql/cursors.py:338行，将self._show_warnings()这一句注释掉，换成pass，如下：  
-![image](https://github.com/jly8866/archer/blob/master/src/screenshots/bugs/bug3.png)
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug3.png)
 但是此方法有副作用，会导致所有调用该pymysql模块的程序不能show warnings，因此强烈推荐使用virtualenv或venv环境！
 
 
