@@ -3,45 +3,44 @@ from .models import users
 from django.conf import settings
 
 leftMenuBtnsCommon = (
-    {'key': 'allworkflow', 'name': '查看历史工单', 'url': '/allworkflow/', 'class': 'glyphicon glyphicon-home'},
-    {'key': 'submitsql', 'name': '发起SQL上线', 'url': '/submitsql/', 'class': 'glyphicon glyphicon-asterisk'},
-    {'key': 'sqlquery', 'name': 'SQL在线查询', 'url': '/sqlquery/', 'class': 'glyphicon glyphicon-search'},
-    {'key': 'queryapply', 'name': '查询权限管理', 'url': '/queryapplylist/', 'class': 'glyphicon glyphicon-eye-open'},
-    {'key': 'workflow', 'name': '工单审核管理', 'url': '/workflow/', 'class': 'glyphicon glyphicon-shopping-cart'},
-
+    {'key': 'allworkflow', 'name': '查看历史工单', 'url': '/allworkflow/', 'class': 'glyphicon glyphicon-home', 'display': True},
+    {'key': 'submitsql', 'name': '发起SQL上线', 'url': '/submitsql/', 'class': 'glyphicon glyphicon-asterisk', 'display': True},
+    {'key': 'sqlquery', 'name': 'SQL在线查询', 'url': '/sqlquery/', 'class': 'glyphicon glyphicon-search', 'display': settings.QUERY},
+    {'key': 'slowquery', 'name': 'SQL慢查日志', 'url': '/slowquery/', 'class': 'glyphicon glyphicon-align-right', 'display': settings.SLOWQUERY},
+    {'key': 'sqladvisor', 'name': 'SQL优化工具', 'url': '/sqladvisor/', 'class': 'glyphicon glyphicon-wrench', 'display': settings.SQLADVISOR},
+    {'key': 'queryapply', 'name': '查询权限管理', 'url': '/queryapplylist/', 'class': 'glyphicon glyphicon-eye-open', 'display': settings.QUERY},
+    {'key': 'workflow', 'name': '工单审核管理', 'url': '/workflow/', 'class': 'glyphicon glyphicon-shopping-cart', 'display': settings.QUERY},
 )
+
 leftMenuBtnsSuper = (
-    {'key': 'admin', 'name': '后台数据管理', 'url': '/admin/', 'class': 'glyphicon glyphicon-list'},
+    {'key': 'diagnosis', 'name': 'RDS进程管理', 'url': '/diagnosis_process/', 'class': 'glyphicon  glyphicon-scissors', 'display': settings.ALIYUN_RDS_MANAGE},
+    {'key': 'ldapsync', 'name': '同步LDAP用户', 'url': '/ldapsync/', 'class': 'glyphicon glyphicon-th-large', 'display': settings.ENABLE_LDAP},
+    {'key': 'admin', 'name': '后台数据管理', 'url': '/admin/', 'class': 'glyphicon glyphicon-list', 'display': True},
 )
+
 leftMenuBtnsDoc = (
-    {'key': 'dbaprinciples', 'name': 'SQL审核必读', 'url': '/dbaprinciples/', 'class': 'glyphicon glyphicon-book'},
-    {'key': 'charts', 'name': '统计图表展示', 'url': '/charts/', 'class': 'glyphicon glyphicon-file'},
+    {'key': 'dbaprinciples', 'name': 'SQL审核必读', 'url': '/dbaprinciples/', 'class': 'glyphicon glyphicon-book', 'display': True},
+    {'key': 'charts', 'name': '统计图表展示', 'url': '/charts/', 'class': 'glyphicon glyphicon-file','display': True},
 )
-
-if settings.ENABLE_LDAP:
-    leftMenuBtnsSuper = (
-        {'key': 'masterconfig', 'name': '主库地址配置', 'url': '/admin/sql/master_config/',
-         'class': 'glyphicon glyphicon-user'},
-        {'key': 'userconfig', 'name': '用户权限配置', 'url': '/admin/sql/users/', 'class': 'glyphicon glyphicon-th-large'},
-        {'key': 'ldapsync', 'name': '同步LDAP用户', 'url': '/ldapsync/', 'class': 'glyphicon glyphicon-th-large'},
-        {'key': 'workflowconfig', 'name': '所有工单管理', 'url': '/admin/sql/workflow/',
-         'class': 'glyphicon glyphicon-list-alt'},
-    )
-
 
 def global_info(request):
     """存放用户，会话信息等."""
     loginUser = request.session.get('login_username', None)
     if loginUser is not None:
         user = users.objects.get(username=loginUser)
+        UserDisplay = user.display
+        if UserDisplay == '':
+            UserDisplay = loginUser
         if user.is_superuser:
             leftMenuBtns = leftMenuBtnsCommon + leftMenuBtnsSuper + leftMenuBtnsDoc
         else:
             leftMenuBtns = leftMenuBtnsCommon + leftMenuBtnsDoc
     else:
         leftMenuBtns = ()
+        UserDisplay = ''
 
     return {
         'loginUser': loginUser,
         'leftMenuBtns': leftMenuBtns,
+        'UserDisplay': UserDisplay
     }

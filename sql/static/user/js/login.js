@@ -3,12 +3,16 @@ $(document).ready(function() {
 	$(document).keydown(function(event) {
 		//keycode==13为回车键
 		if (event.keyCode == 13) {
+				$('#btnLogin').addClass('disabled');
+	            $('#btnLogin').prop('disabled', true);
 			authenticateUser();
 		}
 	});
 });
 
 $('#btnLogin').click(function(){
+	$('#btnLogin').addClass('disabled');
+	$('#btnLogin').prop('disabled', true);
 	authenticateUser();
 });
 
@@ -24,6 +28,8 @@ function authenticateUser() {
             password: inputPassword.val()
         },
         complete: function () {
+        	$('#btnLogin').removeClass('disabled');
+        	$('#btnLogin').prop('disabled', false);
         },
         success: function (data) {
 			if (data.status == 0) {
