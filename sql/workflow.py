@@ -28,6 +28,8 @@ class Workflow(object):
             settingInfo = WorkflowAuditSetting.objects.get(workflow_type=workflow_type)
         except Exception:
             audit_users_list = None
+            result['msg'] = '未配置审核流程，请到后台数据管理进行配置'
+            raise Exception(result['msg'])
         else:
             audit_users_list = settingInfo.audit_users.split(',')
 
