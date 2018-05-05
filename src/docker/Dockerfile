@@ -2,16 +2,24 @@ FROM docker.io/centos
 
 #archer
 RUN yum -y install unzip git gcc gcc-c++ make cmake bison openssl-devel mysql-devel openldap-devel \
-    && yum -y install epel-release \
-    && yum -y install python34 python34-pip python34-devel.x86_64 \
     && cd /opt \
-    && pip3 install virtualenv -i https://mirrors.ustc.edu.cn/pypi/web/simple/ \
-    && virtualenv venv4archer --python=python3.4 \
+    && wget "https://www.python.org/ftp/python/3.6.5/Python-3.6.5.tar.xz" \
+    && tar -xvJf Python-3.6.5.tar.xz \
+    && cd /opt/Python-3.6.5 \
+    &&  ./configure prefix=/usr/local/python3 \
+    && make && make install \
+    && ln -s /usr/local/python3/bin/python3 /usr/bin/python3 \
+    && ln -s /usr/local/python3/bin/pip3 /usr/bin/pip3 \
+    && yum -y install epel-release \
+    && yum -y install python2-pip \
+    && pip install virtualenv -i https://mirrors.ustc.edu.cn/pypi/web/simple/ \
+    && cd /opt \
+    && virtualenv venv4archer --python=python3.6 \
     && source venv4archer/bin/activate \    
     && git clone -b github https://github.com/hhyo/archer.git \
     && pip3 install -r /opt/archer/requirements.txt -i https://mirrors.ustc.edu.cn/pypi/web/simple/ \
-    && cp /opt/archer/src/docker/pymysql/connections.py /opt/venv4archer/lib/python3.4/site-packages/pymysql/ \
-    && cp /opt/archer/src/docker/pymysql/cursors.py /opt/venv4archer/lib/python3.4/site-packages/pymysql/ \
+    && cp /opt/archer/src/docker/pymysql/connections.py /opt/venv4archer/lib/python3.6/site-packages/pymysql/ \
+    && cp /opt/archer/src/docker/pymysql/cursors.py /opt/venv4archer/lib/python3.6/site-packages/pymysql/ \
     && yum -y install nginx \
     && cp /opt/archer/src/docker/nginx.conf /etc/nginx/ \
     && nginx \ 
