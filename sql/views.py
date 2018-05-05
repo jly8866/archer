@@ -242,7 +242,7 @@ def detail(request, workflowId):
 
 
 # 审核通过，不执行
-@role_required(('工程师', 'DBA',))
+@role_required(('审核人', 'DBA',))
 def passed(request):
     workflowId = request.POST['workflowid']
     if workflowId == '' or workflowId is None:

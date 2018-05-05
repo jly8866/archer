@@ -762,7 +762,6 @@ def slowquery_review(request):
     # 判断是RDS还是其他实例
     cluster_info = master_config.objects.get(cluster_name=cluster_name)
     if settings.ALIYUN_RDS_MANAGE:
-        rds_dbinstanceid = cluster_info.aliyunrdsconfig.rds_dbinstanceid
         # 调用阿里云慢日志接口
         result = aliyun_rds_slowquery_review(request)
     else:
@@ -866,7 +865,6 @@ def slowquery_review_history(request):
     # 判断是RDS还是其他实例
     cluster_info = master_config.objects.get(cluster_name=cluster_name)
     if settings.ALIYUN_RDS_MANAGE:
-        rds_dbinstanceid = cluster_info.aliyunrdsconfig.rds_dbinstanceid
         # 调用阿里云慢日志接口
         result = aliyun_rds_slowquery_review_history(request)
     else:
