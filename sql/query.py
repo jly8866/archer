@@ -663,7 +663,8 @@ def query(request):
             query_log.save()
 
     # 返回查询结果
-    return HttpResponse(json.dumps(finalResult, cls=ExtendJSONEncoder, bigint_as_string=True), content_type='application/json')
+    return HttpResponse(json.dumps(finalResult, cls=ExtendJSONEncoder, bigint_as_string=True),
+                        content_type='application/json')
 
 
 # 获取sql查询记录
@@ -749,7 +750,8 @@ def explain(request):
     finalResult['data'] = sql_result
 
     # 返回查询结果
-    return HttpResponse(json.dumps(finalResult, cls=ExtendJSONEncoder, bigint_as_string=True), content_type='application/json')
+    return HttpResponse(json.dumps(finalResult, cls=ExtendJSONEncoder, bigint_as_string=True),
+                        content_type='application/json')
 
 
 # 获取SQL慢日志统计
@@ -759,12 +761,11 @@ def slowquery_review(request):
 
     # 判断是RDS还是其他实例
     cluster_info = master_config.objects.get(cluster_name=cluster_name)
-    try:
-        if settings.ALIYUN_RDS_MANAGE:
-            rds_dbinstanceid = cluster_info.aliyunrdsconfig.rds_dbinstanceid
-            # 调用阿里云慢日志接口
-            result = aliyun_rds_slowquery_review(request)
-    except Exception:
+    if settings.ALIYUN_RDS_MANAGE:
+        rds_dbinstanceid = cluster_info.aliyunrdsconfig.rds_dbinstanceid
+        # 调用阿里云慢日志接口
+        result = aliyun_rds_slowquery_review(request)
+    else:
         StartTime = request.POST.get('StartTime')
         EndTime = request.POST.get('EndTime')
         DBName = request.POST.get('db_name')
@@ -853,7 +854,8 @@ def slowquery_review(request):
         result = {"total": slowsql_obj_count, "rows": SQLSlowLog}
 
     # 返回查询结果
-    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True), content_type='application/json')
+    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True),
+                        content_type='application/json')
 
 
 # 获取SQL慢日志明细
@@ -863,12 +865,11 @@ def slowquery_review_history(request):
 
     # 判断是RDS还是其他实例
     cluster_info = master_config.objects.get(cluster_name=cluster_name)
-    try:
-        if settings.ALIYUN_RDS_MANAGE:
-            rds_dbinstanceid = cluster_info.aliyunrdsconfig.rds_dbinstanceid
-            # 调用阿里云慢日志接口
-            result = aliyun_rds_slowquery_review_history(request)
-    except Exception:
+    if settings.ALIYUN_RDS_MANAGE:
+        rds_dbinstanceid = cluster_info.aliyunrdsconfig.rds_dbinstanceid
+        # 调用阿里云慢日志接口
+        result = aliyun_rds_slowquery_review_history(request)
+    else:
         StartTime = request.POST.get('StartTime')
         EndTime = request.POST.get('EndTime')
         DBName = request.POST.get('db_name')
@@ -959,4 +960,5 @@ def slowquery_review_history(request):
         result = {"total": slowsql_obj_count, "rows": SQLSlowRecord}
 
         # 返回查询结果
-    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True), content_type='application/json')
+    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True),
+                        content_type='application/json')
