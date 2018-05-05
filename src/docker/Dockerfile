@@ -1,7 +1,8 @@
 FROM docker.io/centos
 
 #archer
-RUN yum -y install unzip git gcc gcc-c++ make cmake bison openssl-devel mysql-devel openldap-devel \
+RUN yum -y groupinstall "Development tools" \
+    && yum -y install wget zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gdbm-devel db4-devel libpcap-devel xz-devel \
     && cd /opt \
     && wget "https://www.python.org/ftp/python/3.6.5/Python-3.6.5.tar.xz" \
     && tar -xvJf Python-3.6.5.tar.xz \
@@ -20,7 +21,7 @@ RUN yum -y install unzip git gcc gcc-c++ make cmake bison openssl-devel mysql-de
     && pip3 install -r /opt/archer/requirements.txt -i https://mirrors.ustc.edu.cn/pypi/web/simple/ \
     && cp /opt/archer/src/docker/pymysql/connections.py /opt/venv4archer/lib/python3.6/site-packages/pymysql/ \
     && cp /opt/archer/src/docker/pymysql/cursors.py /opt/venv4archer/lib/python3.6/site-packages/pymysql/ \
-    && yum -y install nginx \
+    && yum -y install gcc gcc-c++ make cmake bison openssl-devel mysql-devel openldap-devel nginx openssl-devel mysql-devel openldap-devel\
     && cp /opt/archer/src/docker/nginx.conf /etc/nginx/ \
     && nginx \ 
 #sqladvisor
