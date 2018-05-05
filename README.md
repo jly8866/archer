@@ -70,7 +70,6 @@
 2. 安装python3，版本号>=3.4：(由于需要修改官方模块，请使用virtualenv或venv等单独隔离环境！)
 3. 安装所需相关模块：  
 `pip3 install -r requirements.txt`  
-为了自动构建docker镜像，requirements.txt的包是完整的依赖包，用户可按照说明进行选择性安装
 4. MySQLdb模块兼容inception版本信息
 由于python3使用的pymysql模块里并未兼容inception返回的server信息，因此需要编辑/pymysql/connections.py
 在if int(self.server_version.split('.', 1)[0]) >= 5: 这一行之前加上以下这一句并保存，记得别用tab键用4个空格缩进：
