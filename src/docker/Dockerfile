@@ -7,9 +7,9 @@ RUN yum -y install unzip git gcc gcc-c++ make cmake bison openssl-devel mysql-de
     && cd /opt \
     && pip3 install virtualenv -i https://mirrors.ustc.edu.cn/pypi/web/simple/ \
     && virtualenv venv4archer --python=python3.4 \
-    && source venv4archer/bin/activate \    
+    && source venv4archer/bin/activate \
     && git clone -b github https://github.com/hhyo/archer.git \
-    && pip3 install -r /opt/archer/requirements.txt -i https://mirrors.ustc.edu.cn/pypi/web/simple/ \
+    && pip3 install -r /opt/archer/src/docker/requirements.txt -i https://mirrors.ustc.edu.cn/pypi/web/simple/ \
     && cp /opt/archer/src/docker/pymysql/connections.py /opt/venv4archer/lib/python3.4/site-packages/pymysql/ \
     && cp /opt/archer/src/docker/pymysql/cursors.py /opt/venv4archer/lib/python3.4/site-packages/pymysql/ \
     && yum -y install nginx \

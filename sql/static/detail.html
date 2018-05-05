@@ -141,14 +141,6 @@
 
     {% elif workflowDetail.status == '审核通过' %}
         {% if loginUser == workflowDetail.engineer %}
-            <!--审核通过后提交人也可以执行SQL-->
-            <form id="from-execute" action="/execute/" method="post" style="display:inline-block;">
-                {% csrf_token %}
-                <input type="hidden" name="workflowid" value="{{ workflowDetail.id }}">
-                <input type="button" id="btnExecute" class="btn btn-danger"
-                       value="立即执行"/>
-            </form>
-            <input type="button" class="btn btn-info" data-toggle="modal" data-target="#cronComfirm" value="定时执行"/>
             <form id="form-cancel" action="/cancel/" method="post" style="display:inline-block;">
                 {% csrf_token %}
                 <input type="hidden" name="workflowid" value="{{ workflowDetail.id }}">
@@ -156,7 +148,7 @@
                 <input type="submit" onclick="loading(this)" class="btn btn-default" value="终止流程"/>
             </form>
 
-        {% elif loginUser in listAllReviewMen %}
+        {% elif loginUserOb.role == 'DBA' %}
             <textarea id="remark" name="remark" class="form-control" data-name="审核备注"
                       placeholder="请填写驳回原因" rows=3></textarea>
             <br>
@@ -178,8 +170,6 @@
 
     {% elif workflowDetail.status == '定时执行' %}
         {% if loginUser == workflowDetail.engineer %}
-            <!--审核通过后提交人也可以定时执行SQL-->
-            <input type="button" class="btn btn-info" data-toggle="modal" data-target="#cronComfirm" value="执行时间变更"/>
             <form id="form-cancel" action="/cancel/" method="post" style="display:inline-block;">
                 {% csrf_token %}
                 <input type="hidden" name="workflowid" value="{{ workflowDetail.id }}">
@@ -187,7 +177,7 @@
                 <input type="submit" onclick="loading(this)" class="btn btn-default" value="终止流程"/>
             </form>
 
-        {% elif loginUser in listAllReviewMen %}
+        {% elif loginUserOb.role == 'DBA' %}
             <textarea id="remark" name="remark" class="form-control" data-name="审核备注"
                       placeholder="请填写驳回原因" rows=3></textarea>
             <br>
@@ -396,7 +386,23 @@
                 uniqueId: "id",                     //每一行的唯一标识，一般为主键列
                 showToggle: false,                   //是否显示详细视图和列表视图的切换按钮
                 cardView: false,                    //是否显示详细视图
-                detailView: false,                   //是否显示父子表
+                detailView: true,                  //是否显示父子表
+                //格式化详情
+                detailFormatter: function (index, row) {
+                    var html = [];
+                    $.each(row, function (key, value) {
+                        if (key === 'SQL') {
+                            var sql = value;
+                            //替换所有的换行符
+                            sql = sql.replace(/\r\n/g, "<br>");
+                            sql = sql.replace(/\n/g, "<br>");
+                            //替换所有的空格
+                            sql = sql.replace(/\s/g, "&nbsp;");
+                            html.push('<span>' + sql + '</span>');
+                        }
+                    });
+                    return html.join('');
+                },
                 locale: 'zh-CN',                    //本地化
                 data:{{ rows|safe }},
                 columns: [{
@@ -407,7 +413,12 @@
                     title: 'SQL内容',
                     field: 'SQL',
                     formatter: function (value, row, index) {
-                        return value.replace(/\n/g, '<br>');
+                        if (value.length > 80) {
+                            return value.substr(0, 80) + '...';
+                        }
+                        else {
+                            return value
+                        }
                     },
                     sortable: true
                 }, {

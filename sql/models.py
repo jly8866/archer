@@ -11,7 +11,7 @@ from .aes_decryptor import Prpcrypt
 # 2.审核人：可以审核并执行SQL上线单的管理者、高级工程师、系统管理员们。
 class users(AbstractUser):
     display = models.CharField('显示的中文名', max_length=50)
-    role = models.CharField('角色', max_length=20, choices=(('工程师', '工程师'), ('审核人', '审核人')), default='工程师')
+    role = models.CharField('角色', max_length=20, choices=(('工程师', '工程师'), ('审核人', '审核人'), ('DBA', 'DBA')), default='工程师')
     is_ldapuser = models.BooleanField('ldap用戶', default=False)
 
     def __str__(self):

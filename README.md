@@ -11,14 +11,14 @@
 * 自动审核  
   发起SQL上线，工单提交，由inception自动审核，审核通过后需要由审核人进行人工审核
 * 人工审核  
-  inception自动审核通过的工单，由DBA人工审核、审核通过自动执行SQL   
+  inception自动审核通过的工单，由其他研发工程师或研发经理来审核，DBA操作执行SQL  
   为什么要有人工审核？  
   这是遵循运维领域线上操作的流程意识，一个工程师要进行线上数据库SQL更新，最好由另外一个工程师来把关  
   很多时候DBA并不知道SQL的业务含义，所以人工审核最好由其他研发工程师或研发经理来审核. 这是archer的设计理念
-* 回滚数据展示
+* 回滚数据展示  
   工单内可展示回滚语句，支持一键提交回滚工单
-* 定时执行SQL
-  审核通过的工单可由申请人或者审核人选择定时执行，执行前可修改执行时间，可随时终止
+* 定时执行SQL  
+  审核通过的工单可由DBA选择定时执行，执行前可修改执行时间，可随时终止
 * pt-osc执行  
   支持pt-osc执行进度展示，并且可以点击中止pt-osc进程  
 * MySQL查询  
@@ -35,8 +35,10 @@
   可配置邮件提醒，对上线申请、权限申请、审核结果等进行通知  
   对异常登录进行通知
 * 主库集群配置
-* 用户权限配置
-  工程师角色（engineer）与审核角色（review_man）:工程师可以发起SQL上线，在通过了inception自动审核之后，需要由人工审核点击确认才能执行SQL.<br/>
+* 用户权限配置  
+  工程师角色（engineer）、审核角色（review_man）、DBA角色：  
+  工程师可以发起SQL上线，在通过了inception自动审核之后，需要由其他研发工程师或研发经理来审核，
+  最后由DBA点击确认才能执行SQL  
   还有一个特殊的超级管理员即可以上线、审核，又可以登录admin界面进行管理
 * 历史工单管理，查看、修改、删除
 * 可通过django admin进行匹配SQL关键字的工单搜索
@@ -63,12 +65,11 @@
 ### 手动安装步骤
 1. 环境准备：  
 (1)克隆代码到本地或者下载zip包
-`git clone https://github.com/jly8866/archer.git`
+`git clone https://github.com/jly8866/archer.git`  
 (2)安装inception，[项目地址](http://mysql-inception.github.io/inception-document/install/)  
 2. 安装python3，版本号>=3.4：(由于需要修改官方模块，请使用virtualenv或venv等单独隔离环境！)
 3. 安装所需相关模块：  
-`pip3 install -r requirements.txt`
-为了自动构建docker镜像，requirements.txt的包是完整的依赖包，用户可按照说明进行选择性安装
+`pip3 install -r requirements.txt`  
 4. MySQLdb模块兼容inception版本信息
 由于python3使用的pymysql模块里并未兼容inception返回的server信息，因此需要编辑/pymysql/connections.py
 在if int(self.server_version.split('.', 1)[0]) >= 5: 这一行之前加上以下这一句并保存，记得别用tab键用4个空格缩进：
@@ -184,8 +185,8 @@ pip install django-auth-ldap==1.3.0
 
 ### 部分功能使用说明
 1. 用户角色配置  
-  在【后台数据管理】-【用户配置】页面管理用户，或者使用LADP导入  
-  工程师角色（engineer）与审核角色（review_man），工程师可以发起SQL上线，审核人进行审核，超级管理员可以登录admin界面进行管理  
+  在【后台数据管理】-【用户配置】页面管理用户，或者使用LADP导入，至少拥有一个工程师角色（engineer）、一个审核角色（review_man）、一个DBA角色才可以进行SQL上线
+  工程师可以发起SQL上线，审核人进行审核，DBA进行执行，超级管理员可以登录admin界面进行管理
 2. 配置主库地址  
   在【后台数据管理】-【主库地址】页面管理主库  
   主库地址用于SQL上线，DDL、DML、慢日志查看、SQL优化等功能
@@ -238,11 +239,11 @@ QQ群：524233225
 
 ### 部分小问题解决办法：
 1. 报错：  
-![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug1.png)&nbsp;
-![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug2.png)
-原因：python3的pymysql模块会向inception发送SHOW WARNINGS语句，导致inception返回一个"Must start as begin statement"错误被archer捕捉到报在日志里.  
-解决：如果实在忍受不了，请修改/path/to/python3/lib/python3.4/site-packages/pymysql/cursors.py:338行，将self._show_warnings()这一句注释掉，换成pass，如下：  
-![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug3.png)
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug1.png)  
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug2.png)  
+原因：python3的pymysql模块会向inception发送SHOW WARNINGS语句，导致inception返回一个"Must start as begin statement"错误被archer捕捉到报在日志里  
+解决：如果实在忍受不了，请修改/path/to/python3/lib/python3.4/site-packages/pymysql/cursors.py:338行，将self._show_warnings()这一句注释掉，换成pass，如下：    
+![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug3.png)  
 但是此方法有副作用，会导致所有调用该pymysql模块的程序不能show warnings，因此强烈推荐使用virtualenv或venv环境！
 
 

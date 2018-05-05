@@ -213,11 +213,11 @@ LOGGING = {
             'handlers': ['default'],
             'level': 'DEBUG',
         },
-        'django.db': {  # 打印SQL语句到console，方便开发
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+        # 'django.db': {  # 打印SQL语句到console，方便开发
+        #     'handlers': ['console'],
+        #     'level': 'DEBUG',
+        #     'propagate': True,
+        # },
         'django.request': {  # 打印SQL语句到console，方便开发
             'handlers': ['console'],
             'level': 'DEBUG',
@@ -238,8 +238,6 @@ MAIL_REVIEW_SMTP_SERVER = 'mail.xxx.com'
 MAIL_REVIEW_SMTP_PORT = 25
 MAIL_REVIEW_FROM_ADDR = 'archer@xxx.com'  # 发件人，也是登录SMTP server需要提供的用户名
 MAIL_REVIEW_FROM_PASSWORD = ''  # 发件人邮箱密码，如果为空则不需要login SMTP server
-MAIL_REVIEW_DBA_ADDR = ['zhangsan@abc.com', 'lisi01@abc.com']  # DBA地址，执行完毕会发邮件给DBA，以list形式保存
-MAIL_REVIEW_SECURE_ADDR = ['zhangsan@abc.com', 'lisi01@abc.com']  # 登录失败，等安全相关发送地址
 # 是否过滤【DROP DATABASE】|【DROP TABLE】|【TRUNCATE PARTITION】|【TRUNCATE TABLE】等高危DDL操作：
 # on是开，会首先用正则表达式匹配sqlContent，如果匹配到高危DDL操作，则判断为“自动审核不通过”；off是关，直接将所有的SQL语句提交给inception，对于上述高危DDL操作，只备份元数据
 CRITICAL_DDL_ON_OFF = 'off'
@@ -247,10 +245,10 @@ CRITICAL_DDL_ON_OFF = 'off'
 # 是否开启SQL查询功能，关闭会隐藏菜单和相关功能
 QUERY = False
 
-# 当inception语法树打印失败时在线查询的结果控制，
+# 当inception语法树打印失败时在线查询的结果控制，建议修改inception变量inception_enable_select_star=OFF，否则select * 会报错
 # True是开启校验，失败不允许继续执行并返回错，
 # False是关闭校验，继续执行，关闭校验会导致解析失败的查询表权限验证和脱敏功能失效
-CHECK_QUERY_ON_OFF = True
+CHECK_QUERY_ON_OFF = False
 
 # 是否开启动态脱敏查询，采取正则遍历处理结果集的方式，会影响部分查询效率
 DATA_MASKING_ON_OFF = False
