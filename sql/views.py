@@ -390,9 +390,10 @@ def cancel(request):
         context = {'errMsg': '驳回原因不能为空'}
         return render(request, 'error.html', context)
 
-    # 服务器端二次验证，如果正在执行终止动作的当前登录用户，不是发起人也不是审核人，则异常.
+    # 服务器端二次验证，如果正在执行终止动作的当前登录用户，不是发起人也不是审核人，并且不是DBA，则异常.
     loginUser = request.session.get('login_username', False)
-    if loginUser is None or (loginUser not in listAllReviewMen and loginUser != workflowDetail.engineer):
+    loginUserOb = users.objects.get(username=loginUser)
+    if loginUser not in listAllReviewMen and loginUser != workflowDetail.engineer and loginUserOb.role != 'DBA':
         context = {'errMsg': '当前登录用户不是审核人也不是发起人，请重新登录.'}
         return render(request, 'error.html', context)
 

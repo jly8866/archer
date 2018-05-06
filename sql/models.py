@@ -39,8 +39,8 @@ class master_config(models.Model):
         return self.cluster_name
 
     class Meta:
-        verbose_name = u'主库地址'
-        verbose_name_plural = u'主库地址'
+        verbose_name = u'主库地址配置'
+        verbose_name_plural = u'主库地址配置'
 
     def save(self, *args, **kwargs):
         pc = Prpcrypt()  # 初始化
@@ -72,8 +72,8 @@ class workflow(models.Model):
         return self.workflow_name
 
     class Meta:
-        verbose_name = u'工单管理'
-        verbose_name_plural = u'工单管理'
+        verbose_name = u'SQL工单管理'
+        verbose_name_plural = u'SQL工单管理'
 
 
 # 各个线上从库地址
@@ -88,8 +88,8 @@ class slave_config(models.Model):
     update_time = models.DateTimeField('更新时间', auto_now=True)
 
     class Meta:
-        verbose_name = u'从库地址'
-        verbose_name_plural = u'从库地址'
+        verbose_name = u'从库地址配置'
+        verbose_name_plural = u'从库地址配置'
 
     def save(self, *args, **kwargs):
         pc = Prpcrypt()  # 初始化
