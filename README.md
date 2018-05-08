@@ -31,6 +31,8 @@
 2. 使用src/init_sql内的变更脚本变更数据库  
    v1.1.1分支请使用v1.1.1->v2.0.sql  
    master分支请使用nowmaster->v2.0.sql
+3. 初始化django-apscheduler相关表  
+   ./manage.py migrate
 3. 修改相关配置文件，启动  
    nginx的static目录配置有调整，具体参考后面的配置
 

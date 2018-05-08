@@ -591,13 +591,16 @@ def query(request):
     slave_info = slave_config.objects.get(cluster_name=cluster_name)
     sqlContent = sqlContent.strip().split(';')[0]
 
-    # 查询权限校验
+    # 查询权限校验，以及limit_num获取
     priv_check_info = query_priv_check(loginUserOb, cluster_name, dbName, sqlContent, limit_num)
 
     if priv_check_info['status'] == 0:
         limit_num = priv_check_info['data']
     else:
         return HttpResponse(json.dumps(priv_check_info), content_type='application/json')
+
+    if re.match(r"^explain", sqlContent.lower()):
+        limit_num = None
 
     # 对查询sql增加limit限制
     if re.match(r"^select", sqlContent.lower()):

@@ -57,7 +57,6 @@ urlpatterns = [
     url(r'^modifyqueryprivileges/$', query.modifyqueryprivileges, name='modifyqueryprivileges'),
     url(r'^query/$', query.query, name='query'),
     url(r'^querylog/$', query.querylog, name='querylog'),
-    url(r'^explain/$', query.explain, name='explain'),
     url(r'^slowquery_review/$', query.slowquery_review, name='slowquery_review'),
     url(r'^slowquery_review_history/$', query.slowquery_review_history, name='slowquery_review_history'),
 

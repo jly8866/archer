@@ -90,7 +90,7 @@ class Dao(object):
         return listCol
 
     # 连进指定的mysql实例里，执行sql并返回
-    def mysql_query(self, masterHost, masterPort, masterUser, masterPassword, dbName, sql, limit_num):
+    def mysql_query(self, masterHost, masterPort, masterUser, masterPassword, dbName, sql, limit_num=None):
         result = {}
         conn = None
         cursor = None
@@ -100,8 +100,10 @@ class Dao(object):
                                    charset='utf8mb4')
             cursor = conn.cursor()
             effect_row = cursor.execute(sql)
-            # rows = cursor.fetchall()
-            rows = cursor.fetchmany(size=int(limit_num))
+            if limit_num:
+                rows = cursor.fetchmany(size=int(limit_num))
+            else:
+                rows = cursor.fetchall()
             fields = cursor.description
 
             column_list = []

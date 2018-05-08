@@ -61,27 +61,25 @@ def submitSql(request):
     listAllClusterName = [master.cluster_name for master in masters]
 
     dictAllClusterDb = OrderedDict()
-    try:
-        # 每一个都首先获取主库地址在哪里
-        for clusterName in listAllClusterName:
-            listMasters = master_config.objects.filter(cluster_name=clusterName)
-            # 取出该集群的名称以及连接方式，为了后面连进去获取所有databases
-            masterHost = listMasters[0].master_host
-            masterPort = listMasters[0].master_port
-            masterUser = listMasters[0].master_user
-            masterPassword = prpCryptor.decrypt(listMasters[0].master_password)
-
+    # 每一个都首先获取主库地址在哪里
+    for clusterName in listAllClusterName:
+        listMasters = master_config.objects.filter(cluster_name=clusterName)
+        # 取出该集群的名称以及连接方式，为了后面连进去获取所有databases
+        masterHost = listMasters[0].master_host
+        masterPort = listMasters[0].master_port
+        masterUser = listMasters[0].master_user
+        masterPassword = prpCryptor.decrypt(listMasters[0].master_password)
+        try:
             listDb = dao.getAlldbByCluster(masterHost, masterPort, masterUser, masterPassword)
             dictAllClusterDb[clusterName] = listDb
-    except Exception as msg:
-        context = {'errMsg': str(msg)}
-        return render(request, 'error.html', context)
+        except Exception as msg:
+            dictAllClusterDb[clusterName] = [str(msg)]
 
     # 获取所有审核人，当前登录用户不可以审核
     loginUser = request.session.get('login_username', False)
     reviewMen = users.objects.filter(role__in=['审核人', 'DBA']).exclude(username=loginUser)
 
-    context = {'currentMenu': 'submitsql', 'dictAllClusterDb': dictAllClusterDb, 'reviewMen': reviewMen}
+    context = {'currentMenu': 'allworkflow', 'dictAllClusterDb': dictAllClusterDb, 'reviewMen': reviewMen}
     return render(request, 'submitSql.html', context)
 
 
@@ -517,7 +515,8 @@ def sqladvisor(request):
         return HttpResponseRedirect('/admin/sql/master_config/add/')
     cluster_name_list = [master.cluster_name for master in masters]
 
-    context = {'currentMenu': 'sqladvisor', 'listAllClusterName': cluster_name_list}
+    limit_num = settings.ADMIN_QUERY_LIMIT
+    context = {'currentMenu': 'sqladvisor', 'listAllClusterName': cluster_name_list, 'limit_num': limit_num}
     return render(request, 'sqladvisor.html', context)
 
 
