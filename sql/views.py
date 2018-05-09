@@ -515,8 +515,7 @@ def sqladvisor(request):
         return HttpResponseRedirect('/admin/sql/master_config/add/')
     cluster_name_list = [master.cluster_name for master in masters]
 
-    limit_num = settings.ADMIN_QUERY_LIMIT
-    context = {'currentMenu': 'sqladvisor', 'listAllClusterName': cluster_name_list, 'limit_num': limit_num}
+    context = {'currentMenu': 'sqladvisor', 'listAllClusterName': cluster_name_list}
     return render(request, 'sqladvisor.html', context)
 
 

@@ -249,13 +249,12 @@
             var columns = [];
             $.ajax({
                 type: "post",
-                url: "/query/",
+                url: "/explain/",
                 dataType: "json",
                 data: {
-                    sql_content: 'explain ' + editor.getValue(),
-                    cluster_name: $("#cluster_name").val(),
-                    db_name: $("#db_name").val(),
-                    limit_num: {{ limit_num }}
+                    sql_content: 'explain ' + sqlContent,
+                    cluster_name: clusterName,
+                    db_name: dbName
                 },
                 complete: function () {
                     $('input[type=button]').removeClass('disabled');
@@ -279,15 +278,7 @@
                         else if (result['column_list']) {
                             //异步获取要动态生成的列
                             $.each(result['column_list'], function (i, column) {
-                                columns.push({
-                                    "field": i,
-                                    "title": column,
-                                    "sortable": true,
-                                    "formatter": function (value, row, index) {
-                                        //return value;
-                                        return $('<div/>').text(value).html();
-                                    }
-                                });
+                                columns.push({"field": i, "title": column});
                             });
                             //初始化查询结果
                             $('#tb_explain').bootstrapTable('destroy').bootstrapTable({

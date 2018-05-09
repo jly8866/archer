@@ -747,8 +747,7 @@ def explain(request):
 
     # 执行获取执行计划语句
     sql_result = dao.mysql_query(masterInfo.master_host, masterInfo.master_port, masterInfo.master_user,
-                                 prpCryptor.decrypt(masterInfo.master_password), str(dbName), sqlContent,
-                                 limit_num=10000)
+                                 prpCryptor.decrypt(masterInfo.master_password), str(dbName), sqlContent)
 
     finalResult['data'] = sql_result
 
