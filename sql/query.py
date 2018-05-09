@@ -600,7 +600,7 @@ def query(request):
         return HttpResponse(json.dumps(priv_check_info), content_type='application/json')
 
     if re.match(r"^explain", sqlContent.lower()):
-        limit_num = None
+        limit_num = 0
 
     # 对查询sql增加limit限制
     if re.match(r"^select", sqlContent.lower()):
