@@ -30,11 +30,12 @@
    `git clone -b archer-2.0 https://github.com/jly8866/archer.git`  
 2. 使用src/init_sql内的变更脚本变更数据库  
    v1.1.1分支请使用v1.1.1->v2.0.sql  
-   master分支请使用nowmaster->v2.0.sql
+   master分支请使用nowmaster->v2.0.sql  
+   2.0分支无需变更数据库  
 3. 安装相关模块  
-   `pip3 install -r requirements.txt` 
+   `pip3 install -r requirements.txt -i https://mirrors.ustc.edu.cn/pypi/web/simple/` 
 4. 初始化django-apscheduler相关表  
-   ./manage.py migrate
+   `python3 manage.py migrate`
 5. 修改相关配置文件，启动  
    nginx的static目录配置有调整，具体参考后面的配置
 
@@ -151,7 +152,7 @@ self.server_version = '5.6.24-72.2-log'
             }
 
             location /static {
-              alias /archer/static; #此处指向settings.py配置项STATIC_ROOT目录的绝对路径，用于ngnix收集静态资源
+              alias /archer/static; #此处指向settings.py配置项STATIC_ROOT目录的绝对路径，用于nginx收集静态资源
             }
 
             error_page 404 /404.html;

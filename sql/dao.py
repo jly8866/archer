@@ -100,7 +100,7 @@ class Dao(object):
                                    charset='utf8mb4')
             cursor = conn.cursor()
             effect_row = cursor.execute(sql)
-            if limit_num > 0:
+            if int(limit_num) > 0:
                 rows = cursor.fetchmany(size=int(limit_num))
             else:
                 rows = cursor.fetchall()
