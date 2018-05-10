@@ -107,8 +107,9 @@ class Dao(object):
             fields = cursor.description
 
             column_list = []
-            for i in fields:
-                column_list.append(i[0])
+            if fields:
+                for i in fields:
+                    column_list.append(i[0])
             result = {}
             result['column_list'] = column_list
             result['rows'] = rows

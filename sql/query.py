@@ -576,11 +576,15 @@ def query(request):
     loginUserOb = users.objects.get(username=loginUser)
 
     # 过滤注释语句和非查询的语句
-    sql_list = sqlContent.split('\n')
+    sqlContent = ''.join(
+        map(lambda x: re.compile(r'(^--.*|^/\*.*\*/;[\f\n\r\t\v\s]*$)').sub('', x, count=1),
+            sqlContent.splitlines(1))).strip()
+    # 去除空行
+    sqlContent = re.sub('[\r\n\f]{2,}', '\n', sqlContent)
+
+    sql_list = sqlContent.strip().split('\n')
     for sql in sql_list:
-        if re.match(r"^(\--|#)", sql):
-            pass
-        elif re.match(r"^select|^show.*create.*table|^explain", sql.lower()):
+        if re.match(r"^select|^show.*create.*table|^explain", sql.lower()):
             break
         else:
             finalResult['status'] = 1
