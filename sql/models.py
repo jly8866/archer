@@ -21,10 +21,6 @@ class users(AbstractUser):
         verbose_name = u'用户配置'
         verbose_name_plural = u'用户配置'
 
-
-users._meta.get_field('is_active').default = False  # ldap default can't login, need admin to control
-
-
 # 各个线上主库地址。
 class master_config(models.Model):
     cluster_name = models.CharField('集群名称', max_length=50, unique=True)

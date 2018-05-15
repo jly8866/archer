@@ -41,7 +41,7 @@ class usersChangeForm(UserChangeForm):
 class usersAdmin(UserAdmin):
     def __init__(self, *args, **kwargs):
         super(usersAdmin, self).__init__(*args, **kwargs)
-        self.list_display = ('id', 'username', 'display', 'role', 'email', 'password', 'is_superuser', 'is_staff')
+        self.list_display = ('id', 'username', 'display', 'role', 'email', 'is_superuser', 'is_staff', 'is_active')
         self.search_fields = ('id', 'username', 'display', 'role', 'email')
         self.form = usersChangeForm
         self.add_form = usersCreationForm

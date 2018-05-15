@@ -20,8 +20,6 @@ leftMenuBtnsCommon = (
 leftMenuBtnsSuper = (
     {'key': 'diagnosis', 'name': 'RDS进程管理', 'url': '/diagnosis_process/', 'class': 'glyphicon  glyphicon-scissors',
      'display': settings.ALIYUN_RDS_MANAGE},
-    {'key': 'ldapsync', 'name': '同步LDAP用户', 'url': '/ldapsync/', 'class': 'glyphicon glyphicon-th-large',
-     'display': settings.ENABLE_LDAP},
     {'key': 'admin', 'name': '后台数据管理', 'url': '/admin/', 'class': 'glyphicon glyphicon-list', 'display': True},
 )
 
