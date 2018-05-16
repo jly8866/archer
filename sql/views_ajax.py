@@ -173,7 +173,7 @@ def sqlworkflow(request):
                 Q(engineer__contains=search) | Q(workflow_name__contains=search)
             ).count()
     elif navStatus in Const.workflowStatus.keys():
-        if loginUserOb.is_superuser == 1:
+        if loginUserOb.is_superuser == 1 or loginUserOb.role == 'DBA':
             listWorkflow = workflow.objects.filter(
                 status=Const.workflowStatus[navStatus]
             ).order_by('-create_time')[offset:limit].values("id", "workflow_name", "engineer", "status",
@@ -479,62 +479,8 @@ def workflowlist(request):
     auditlistCount = result['data']['auditlistCount']
 
     # QuerySet 序列化
-    auditlist = serializers.serialize("json", auditlist)
-    auditlist = json.loads(auditlist)
-    list = []
-    for i in range(len(auditlist)):
-        auditlist[i]['fields']['id'] = auditlist[i]['pk']
-        list.append(auditlist[i]['fields'])
-    result = {"total": auditlistCount, "rows": list}
+    rows = [row for row in auditlist]
 
-    result = {"total": auditlistCount, "rows": list}
+    result = {"total": auditlistCount, "rows": rows}
     # 返回查询结果
-    return HttpResponse(json.dumps(result), content_type='application/json')
-
-
-# 工单审核
-@csrf_exempt
-def workflowaudit(request):
-    # 获取用户信息
-    loginUser = request.session.get('login_username', False)
-    result = {'status': 0, 'msg': 'ok', 'data': []}
-
-    audit_id = int(request.POST['audit_id'])
-    audit_status = int(request.POST['audit_status'])
-    audit_remark = request.POST['audit_remark']
-
-    # 获取审核信息
-    auditInfo = workflowOb.auditinfo(audit_id)
-
-    # 使用事务保持数据一致性
-    try:
-        with transaction.atomic():
-            # 调用工作流接口审核
-            auditresult = workflowOb.auditworkflow(audit_id, audit_status, loginUser, audit_remark)
-
-            # 按照审核结果更新业务表审核状态
-            if auditresult['status'] == 0:
-                if auditInfo.workflow_type == WorkflowDict.workflow_type['query']:
-                    # 更新业务表审核状态,插入权限信息
-                    query_audit_call_back(auditInfo.workflow_id, auditresult['data']['workflow_status'])
-
-                    # 给拒绝和审核通过的申请人发送邮件
-                    if hasattr(settings, 'MAIL_ON_OFF') is True and getattr(settings, 'MAIL_ON_OFF') == "on":
-                        email_reciver = users.objects.get(username=auditInfo.create_user).email
-
-                        email_content = "发起人：" + auditInfo.create_user + "\n审核人：" + auditInfo.audit_users \
-                                        + "\n工单地址：" + request.scheme + "://" + request.get_host() + "/workflowdetail/" \
-                                        + str(audit_id) + "\n工单名称： " + auditInfo.workflow_title \
-                                        + "\n审核备注： " + audit_remark
-                        if auditresult['data']['workflow_status'] == WorkflowDict.workflow_status['audit_success']:
-                            email_title = "工单审核通过 # " + str(auditInfo.audit_id)
-                            mailSender.sendEmail(email_title, email_content, [email_reciver])
-                        elif auditresult['data']['workflow_status'] == WorkflowDict.workflow_status['audit_reject']:
-                            email_title = "工单被驳回 # " + str(auditInfo.audit_id)
-                            mailSender.sendEmail(email_title, email_content, [email_reciver])
-    except Exception as msg:
-        result['status'] = 1
-        result['msg'] = str(msg)
-    else:
-        result = auditresult
-    return HttpResponse(json.dumps(result), content_type='application/json')
+    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True), content_type='application/json')

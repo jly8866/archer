@@ -5,13 +5,13 @@ from . import views, views_ajax, query, jobs
 from django.conf import settings
 
 urlpatterns = [
-    url(r'^$', views.allworkflow, name='allworkflow'),
-    url(r'^index/$', views.allworkflow, name='allworkflow'),
+    url(r'^$', views.sqlworkflow, name='sqlworkflow'),
+    url(r'^index/$', views.sqlworkflow, name='sqlworkflow'),
     url(r'^login/$', views.login, name='login'),
     url(r'^logout/$', views.logout, name='logout'),
     url(r'^submitsql/$', views.submitSql, name='submitSql'),
-    url(r'editsql/$', views.submitSql, name='editsql'),
-    url(r'^allworkflow/$', views.allworkflow, name='allworkflow'),
+    url(r'^editsql/$', views.submitSql, name='editsql'),
+    url(r'^allworkflow/$', views.sqlworkflow, name='sqlworkflow'),
 
     url(r'^autoreview/$', views.autoreview, name='autoreview'),
     url(r'^detail/(?P<workflowId>[0-9]+)/$', views.detail, name='detail'),
@@ -24,7 +24,8 @@ urlpatterns = [
     url(r'^slowquery/$', views.slowquery, name='slowquery'),
     url(r'^sqladvisor/$', views.sqladvisor, name='sqladvisor'),
     url(r'^slowquery_advisor/$', views.sqladvisor, name='slowquery_advisor'),
-    url(r'^queryapplylist/(?P<workflow_id>[0-9]+)?$', views.queryapplylist, name='queryapplylist'),
+    url(r'^queryapplylist/$', views.queryapplylist, name='queryapplylist'),
+    url(r'^queryapplydetail/(?P<apply_id>[0-9]+)/$', views.queryapplydetail, name='queryapplydetail'),
     url(r'^queryuserprivileges/$', views.queryuserprivileges, name='queryuserprivileges'),
     url(r'^diagnosis_process/$', views.diagnosis_process, name='diagnosis_process'),
     url(r'^diagnosis_sapce/$', views.diagnosis_sapce, name='diagnosis_sapce'),
@@ -43,7 +44,6 @@ urlpatterns = [
     url(r'^stopOscProgress/$', views_ajax.stopOscProgress, name='stopOscProgress'),
     url(r'^sqladvisorcheck/$', views_ajax.sqladvisorcheck, name='sqladvisorcheck'),
     url(r'^workflowlist/$', views_ajax.workflowlist, name='workflowlist'),
-    url(r'^workflowaudit/$', views_ajax.workflowaudit, name='workflowaudit'),
 
     url(r'^getClusterList/$', query.getClusterList, name='getClusterList'),
     url(r'^getdbNameList/$', query.getdbNameList, name='getdbNameList'),
@@ -53,6 +53,7 @@ urlpatterns = [
     url(r'^getuserprivileges/$', query.getuserprivileges, name='getuserprivileges'),
     url(r'^applyforprivileges/$', query.applyforprivileges, name='applyforprivileges'),
     url(r'^modifyqueryprivileges/$', query.modifyqueryprivileges, name='modifyqueryprivileges'),
+    url(r'^queryprivaudit/$', query.queryprivaudit, name='queryprivaudit'),
     url(r'^query/$', query.query, name='query'),
     url(r'^querylog/$', query.querylog, name='querylog'),
     url(r'^explain/$', query.explain, name='explain'),
