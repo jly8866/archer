@@ -1,13 +1,14 @@
 import re
 
 import simplejson as json
+from django.core.urlresolvers import reverse
 
 from django.db.models import Q, Min, F, Sum
 from django.db import connection
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.core import serializers
 from django.db import transaction
 from datetime import date
@@ -72,7 +73,7 @@ def query_priv_check(loginUserOb, cluster_name, dbName, sqlContent, limit_num):
     finalResult = {'status': 0, 'msg': 'ok', 'data': {}}
     # 检查用户是否有该数据库/表的查询权限
     loginUser = loginUserOb.username
-    if loginUserOb.is_superuser:
+    if loginUserOb.is_superuser == 1 or loginUserOb.role == 'DBA':
         user_limit_num = getattr(settings, 'ADMIN_QUERY_LIMIT')
         if int(limit_num) == 0:
             limit_num = int(user_limit_num)
@@ -336,36 +337,30 @@ def getqueryapplylist(request):
     if search is None:
         search = ''
 
-    # 审核列表跳转
-    workflow_id = request.POST.get('workflow_id')
     # 获取列表数据,申请人只能查看自己申请的数据,管理员可以看到全部数据
-    if workflow_id != '0':
-        # 判断权限
-        audit_users = workflowOb.auditinfobyworkflow_id(workflow_id, WorkflowDict.workflow_type['query']).audit_users
-        if loginUserOb.is_superuser or loginUserOb.username in audit_users.split(','):
-            applylist = QueryPrivilegesApply.objects.filter(apply_id=workflow_id)
-            applylistCount = QueryPrivilegesApply.objects.filter(apply_id=workflow_id).count()
-        else:
-            applylist = QueryPrivilegesApply.objects.filter(apply_id=workflow_id, user_name=loginUser)
-            applylistCount = QueryPrivilegesApply.objects.filter(apply_id=workflow_id, user_name=loginUser).count()
-    elif loginUserOb.is_superuser:
+    if loginUserOb.is_superuser == 1 or loginUserOb.role == 'DBA':
         applylist = QueryPrivilegesApply.objects.all().filter(title__contains=search).order_by('-apply_id')[
-                    offset:limit]
+                    offset:limit].values(
+            'apply_id', 'title', 'cluster_name', 'db_list', 'priv_type', 'table_list', 'limit_num', 'valid_date',
+            'user_name', 'status', 'create_time'
+        )
         applylistCount = QueryPrivilegesApply.objects.all().filter(title__contains=search).count()
     else:
         applylist = QueryPrivilegesApply.objects.filter(user_name=loginUserOb.username).filter(
-            title__contains=search).order_by('-apply_id')[offset:limit]
+            title__contains=search).order_by('-apply_id')[offset:limit].values(
+            'apply_id', 'title', 'cluster_name', 'db_list', 'priv_type', 'table_list', 'limit_num', 'valid_date',
+            'user_name', 'status', 'create_time'
+        )
         applylistCount = QueryPrivilegesApply.objects.filter(user_name=loginUserOb.username).filter(
             title__contains=search).count()
 
     # QuerySet 序列化
-    applylist = serializers.serialize("json", applylist)
-    applylist = json.loads(applylist)
-    applylist_result = [apply_info['fields'] for apply_info in applylist]
+    rows = [row for row in applylist]
 
-    result = {"total": applylistCount, "rows": applylist_result}
+    result = {"total": applylistCount, "rows": rows}
     # 返回查询结果
-    return HttpResponse(json.dumps(result), content_type='application/json')
+    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True),
+                        content_type='application/json')
 
 
 # 申请查询权限
@@ -491,7 +486,7 @@ def getuserprivileges(request):
     loginUserOb = users.objects.get(username=loginUser)
 
     # 获取用户的权限数据
-    if loginUserOb.is_superuser:
+    if loginUserOb.is_superuser == 1 or loginUserOb.role == 'DBA':
         if user_name != 'all':
             privilegeslist = QueryPrivileges.objects.all().filter(user_name=user_name, is_deleted=0,
                                                                   table_name__contains=search).order_by(
@@ -549,6 +544,56 @@ def modifyqueryprivileges(request):
         return HttpResponse(json.dumps(result), content_type='application/json')
 
 
+# 查询权限审核
+@csrf_exempt
+def queryprivaudit(request):
+    apply_id = int(request.POST['apply_id'])
+    audit_status = int(request.POST['audit_status'])
+    audit_remark = request.POST.get('audit_remark')
+
+    if audit_remark is None:
+        audit_remark = ''
+
+    # 获取用户信息
+    loginUser = request.session.get('login_username', False)
+
+    # 使用事务保持数据一致性
+    try:
+        with transaction.atomic():
+            # 获取audit_id
+            audit_id = workflowOb.auditinfobyworkflow_id(workflow_id=apply_id,
+                                                         workflow_type=WorkflowDict.workflow_type['query']).audit_id
+
+            # 调用工作流接口审核
+            auditresult = workflowOb.auditworkflow(audit_id, audit_status, loginUser, audit_remark)
+
+            # 按照审核结果更新业务表审核状态
+            auditInfo = workflowOb.auditinfo(audit_id)
+            if auditInfo.workflow_type == WorkflowDict.workflow_type['query']:
+                # 更新业务表审核状态,插入权限信息
+                query_audit_call_back(auditInfo.workflow_id, auditresult['data']['workflow_status'])
+
+                # 给拒绝和审核通过的申请人发送邮件
+                if settings.MAIL_ON_OFF == "on":
+                    email_reciver = users.objects.get(username=auditInfo.create_user).email
+
+                    email_content = "发起人：" + auditInfo.create_user + "\n审核人：" + auditInfo.audit_users \
+                                    + "\n工单地址：" + request.scheme + "://" + request.get_host() + "/workflowdetail/" \
+                                    + str(audit_id) + "\n工单名称： " + auditInfo.workflow_title \
+                                    + "\n审核备注： " + audit_remark
+                    if auditresult['data']['workflow_status'] == WorkflowDict.workflow_status['audit_success']:
+                        email_title = "工单审核通过 # " + str(auditInfo.audit_id)
+                        mailSenderOb.sendEmail(email_title, email_content, [email_reciver])
+                    elif auditresult['data']['workflow_status'] == WorkflowDict.workflow_status['audit_reject']:
+                        email_title = "工单被驳回 # " + str(auditInfo.audit_id)
+                        mailSenderOb.sendEmail(email_title, email_content, [email_reciver])
+    except Exception as msg:
+        context = {'errMsg': msg}
+        return render(request, 'error.html', context)
+
+    return HttpResponseRedirect(reverse('sql:queryapplydetail', args=(apply_id,)))
+
+
 # 获取SQL查询结果
 @csrf_exempt
 def query(request):
@@ -576,11 +621,15 @@ def query(request):
     loginUserOb = users.objects.get(username=loginUser)
 
     # 过滤注释语句和非查询的语句
-    sql_list = sqlContent.split('\n')
+    sqlContent = ''.join(
+        map(lambda x: re.compile(r'(^--.*|^/\*.*\*/;[\f\n\r\t\v\s]*$)').sub('', x, count=1),
+            sqlContent.splitlines(1))).strip()
+    # 去除空行
+    sqlContent = re.sub('[\r\n\f]{2,}', '\n', sqlContent)
+
+    sql_list = sqlContent.strip().split('\n')
     for sql in sql_list:
-        if re.match(r"^(\--|#)", sql):
-            pass
-        elif re.match(r"^select|^show.*create.*table|^explain", sql.lower()):
+        if re.match(r"^select|^show.*create.*table|^explain", sql.lower()):
             break
         else:
             finalResult['status'] = 1
@@ -591,13 +640,16 @@ def query(request):
     slave_info = slave_config.objects.get(cluster_name=cluster_name)
     sqlContent = sqlContent.strip().split(';')[0]
 
-    # 查询权限校验
+    # 查询权限校验，以及limit_num获取
     priv_check_info = query_priv_check(loginUserOb, cluster_name, dbName, sqlContent, limit_num)
 
     if priv_check_info['status'] == 0:
         limit_num = priv_check_info['data']
     else:
         return HttpResponse(json.dumps(priv_check_info), content_type='application/json')
+
+    if re.match(r"^explain", sqlContent.lower()):
+        limit_num = 0
 
     # 对查询sql增加limit限制
     if re.match(r"^select", sqlContent.lower()):
@@ -684,7 +736,7 @@ def querylog(request):
         search = ''
 
     # 查询个人记录，超管查看所有数据
-    if loginUserOb.is_superuser:
+    if loginUserOb.is_superuser == 1 or loginUserOb.role == 'DBA':
         sql_log_count = QueryLog.objects.all().filter(Q(sqllog__contains=search) | Q(username__contains=search)).count()
         sql_log_list = QueryLog.objects.all().filter(
             Q(sqllog__contains=search) | Q(username__contains=search)).order_by(
@@ -744,8 +796,7 @@ def explain(request):
 
     # 执行获取执行计划语句
     sql_result = dao.mysql_query(masterInfo.master_host, masterInfo.master_port, masterInfo.master_user,
-                                 prpCryptor.decrypt(masterInfo.master_password), str(dbName), sqlContent,
-                                 limit_num=10000)
+                                 prpCryptor.decrypt(masterInfo.master_password), str(dbName), sqlContent)
 
     finalResult['data'] = sql_result
 

@@ -43,7 +43,7 @@ def add_sqlcronjob(job_id, run_date, workflowId, url):
         logger.debug("Scheduler started!")
     except SchedulerAlreadyRunningError:
         logger.debug("Scheduler is already running!")
-    logger.debug('add_sqlcronjob:' + job_id + "run_date:" + run_date.strftime('%Y-%m-%d %H:%M:%S'))
+    logger.debug('add_sqlcronjob:' + job_id + " run_date:" + run_date.strftime('%Y-%m-%d %H:%M:%S'))
 
 
 # 删除sql执行任务

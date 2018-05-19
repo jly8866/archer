@@ -1,38 +1,5 @@
 # archer
-基于inception的自动化SQL操作平台，支持工单、审核、定时任务、邮件、OSC等功能，额外可配置功能有MySQL查询、动态脱敏、查询权限管理、慢查询管理、阿里云RDS管理等，页面可自适应小屏设备，
-
-## 2.0更新说明
-### 更新内容
-- 新增  
->增加DBA角色，SQL上线逻辑调整为：工程师提SQL->审核人审核->DBA执行，同时也支持DBA一个角色的审核和执行    
->增加定时执行SQL工单，将审核和执行分离   
->增加SQL在线查询模块，支持查询权限申请、审核、管理，支持查询动态脱敏，保护隐私数据，可配置，默认不展示    
->增加SQL慢日志收集管理模块，可配置，默认不展示    
->增加SQL优化模块，基于SQLadvisor一键优化慢查询，可配置，默认不展示    
->增加阿里云RDS管理模块，管理RDS进程、慢查询、表空间信息，可配置，默认不展示  
->增加工单审核驳回备注，流程沟通更顺畅  
->增加SQL上传功能，提交工单更快速  
->增加全局异常日志捕获，方便定位问题  
->增加Dockerfile信息，自动构建最新docker镜像  
-- 优化  
->全局表格样式调整，显著提升显示性能，并且兼容手机等小屏设备  
->工单列表调整，支持工单名称和提交人搜索，列表性能优化  
->工单详情性能优化，解决提交语句过多可能造成服务崩溃的问题  
->图表展示优化，via绝望的生鱼片  
->登录时自动认证管理后台，避免二次登录  
->页面显示用户中文名  
-- 修复  
->修复SQL语句执行时间过长造成工单状态持续执行中的问题  
->调整回滚语句为倒序展示，避免提交回滚异常
-
-### 升级步骤
-1. 克隆2.0分支代码到本地或者下载zip包   
-   `git clone -b archer-2.0 https://github.com/jly8866/archer.git`  
-2. 使用src/init_sql内的变更脚本变更数据库  
-   v1.1.1分支请使用v1.1.1->v2.0.sql  
-   master分支请使用nowmaster->v2.0.sql
-3. 修改相关配置文件，启动  
-   nginx的static目录配置有调整，具体参考后面的配置
+基于inception的自动化SQL操作平台，支持工单、审核、定时任务、邮件、OSC等功能，额外可配置功能有MySQL查询、动态脱敏、查询权限管理、慢查询管理、阿里云RDS管理等
 
 ### 开发语言和推荐环境
     python：3.4及以上  
@@ -77,6 +44,7 @@
 * 可通过django admin进行匹配SQL关键字的工单搜索
 * 发起SQL上线，可配置的邮件提醒审核人进行审核
 * 在发起SQL上线前，自助SQL审核，给出建议
+* 支持手机端操作
 
 ## 设计规范
 * 合理的数据库设计和规范很有必要，尤其是MySQL数据库，内核没有oracle、db2、SQL Server等数据库这么强大，需要合理设计，扬长避短。互联网业界有成熟的MySQL设计规范，特此撰写如下。请读者在公司上线使用archer系统之前由专业DBA给所有后端开发人员培训一下此规范，做到知其然且知其所以然。  
@@ -84,6 +52,43 @@
 
 ## 主要配置文件
 * archer/archer/settings.py  
+
+## 2.0更新说明
+#### 更新内容
+- 新增  
+>增加DBA角色，SQL上线逻辑调整为：工程师提SQL->审核人审核->DBA执行，同时也支持DBA一个角色的审核和执行    
+>增加定时执行SQL工单，将审核和执行分离   
+>增加SQL在线查询模块，支持查询权限申请、审核、管理，支持查询动态脱敏，保护隐私数据，可配置，默认不展示    
+>增加SQL慢日志收集管理模块，可配置，默认不展示    
+>增加SQL优化模块，基于SQLadvisor一键优化慢查询，可配置，默认不展示    
+>增加阿里云RDS管理模块，管理RDS进程、慢查询、表空间信息，可配置，默认不展示  
+>增加工单审核驳回备注，流程沟通更顺畅  
+>增加SQL上传功能，提交工单更快速  
+>增加全局异常日志捕获，方便定位问题  
+>增加Dockerfile信息，自动构建最新docker镜像  
+- 优化  
+>全局表格样式调整，显著提升显示性能，并且兼容手机等小屏设备  
+>工单列表调整，支持工单名称和提交人搜索，列表性能优化  
+>工单详情性能优化，解决提交语句过多可能造成服务崩溃的问题  
+>图表展示优化，via绝望的生鱼片  
+>登录时自动认证管理后台，避免二次登录  
+>页面显示用户中文名  
+- 修复  
+>修复SQL语句执行时间过长造成工单状态持续执行中的问题  
+>调整回滚语句为倒序展示，避免提交回滚异常
+
+#### 升级步骤(仅用于现有版本升级，全新安装请参考后面的部署方法)
+1. 克隆2.0分支代码到本地或者下载zip包   
+   `git clone -b archer-2.0 https://github.com/jly8866/archer.git`  
+2. 使用src/init_sql内的变更脚本变更数据库  
+   v1.1.1分支请使用v1.1.1->v2.0.sql  
+   master分支请使用nowmaster->v2.0.sql  
+   2.0分支无需变更数据库  
+3. 安装相关模块  
+   `pip3 install -r requirements.txt -i https://mirrors.ustc.edu.cn/pypi/web/simple/` 
+4. 初始化django-apscheduler相关表  
+   `python3 manage.py migrate`
+5. 修改相关配置文件，启动  
 
 ## 采取docker部署
 * docker镜像，参考wiki：
@@ -93,11 +98,11 @@
 
 ## 一键安装脚本
 * 可快速安装好archer环境，inception还需自行安装配置  
-[centos7_install](https://github.com/jly8866/archer/blob/master/src/script/centos7_install.sh)
+[centos7_install](https://github.com/jly8866/archer/blob/archer-2.0/src/script/centos7_install.sh)
 
 ## 手动安装步骤
 1. 环境准备：  
-(1)克隆代码到本地或者下载zip包
+(1)克隆代码到本地或者下载2.0分支zip包  
 `git clone -b archer-2.0 https://github.com/jly8866/archer.git`   
 (2)安装inception，[项目地址](http://mysql-inception.github.io/inception-document/install/)  
 2. 安装python3，版本号>=3.4：(由于需要修改官方模块，请使用virtualenv或venv等单独隔离环境！)
@@ -147,7 +152,7 @@ self.server_version = '5.6.24-72.2-log'
             }
 
             location /static {
-              alias /archer/static; #此处指向settings.py配置项STATIC_ROOT目录的绝对路径，用于ngnix收集静态资源
+              alias /archer/static; #此处指向settings.py配置项STATIC_ROOT目录的绝对路径，用于nginx收集静态资源
             }
 
             error_page 404 /404.html;
@@ -269,8 +274,69 @@ pip install django-auth-ldap==1.3.0
 ## 联系方式：
 QQ群：524233225
 
-## 部分小问题解决办法：
-1. 报错：  
+## 部分问题解决办法：  
+#### 页面样式显示异常  
+1. runserver/debug.sh启动  
+settings里面关闭了debug，即DEBUG = False，需要在启动命令后面增加 --insecure，变成  
+`python3 manage.py runserver 0.0.0.0:9123  --insecure`  
+2. nginx+gunicorn/startup.sh启动  
+nginx的静态资源配置不正确   
+
+```
+location /static {
+              alias /archer/static; #此处指向settings.py配置项STATIC_ROOT目录的绝对路径，用于nginx收集静态资源，一般默认为archer按照目录下的static目录
+            }
+```
+#### 用户管理  
+1. 偶现添加用户报错  
+采用nginx+gunicorn/startup.sh启动，多worker的部署，目前问题没有解决，可使用非save按钮进行添加  
+2. 无法登录（确认用户名和密码正确）  
+检查用户is_active字段是否为1，django自带认证默认is_active约束是否可以登录前台，is_status约束是否可以登录后台管理  
+
+#### SQL上线
+1. 集群不显示数据库  
+archer会默认过滤一些系统数据库，过滤列表为`'information_schema', 'performance_schema', 'mysql', 'test', 'sys'`  
+主库配置的用户名或密码错误  
+
+2. 审核人不显示
+不能提交给自己审核，即使当前登录人是审核人/DBA    
+没有审核人/DBA角色的有效用户    
+
+3. 检测SQL报错  
+3.1. invalid literal for int() with base 10:'Inception2'    
+调整pymysql使其兼容Inception版本信息，  
+使用src/docker/pymysql目录下的文件替换/path/to/python3/lib/python3.4/site-packages/pymysql/目录下的文件，或者按照安装文档修改  
+3.2. invalid source infomation  
+inception用来审核的账号，密码不能包含*  
+3.3. Must start as begin statement    
+inception用来审核的账号或者密码不正确   
+3.4. Incorrect database name ''  
+inception检查不支持子查询  
+3.5. Invalid remote backup information  
+原因暂时不明  
+
+#### 无法生成回滚语句
+1. 检查配置文件里面inception相关配置  
+2. 检查inception审核用户和备份用户权限，权限参考    
+
+```
+— inception备份用户
+GRANT SELECT, INSERT, CREATE ON *.* TO 'inception_bak'
+— inception审核用户（各个业务实例）
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER,REPLICATION CLIENT,REPLICATION SLAVE ON *.* TO 'inception'
+— archer在线查询用户
+GRANT SELECT ON *.* TO 'archer_read'
+
+```
+3. 检查binlog格式，需要为ROW  
+4. 检查DML的表是否存在主键  
+
+#### 定时任务  
+1. 未执行  
+检查django-apscheduler相关表是否有创建，可使用`python3 manage.py migrate`创建  
+
+
+#### 其他错误：    
 ![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug1.png)  
 ![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug2.png)  
 原因：python3的pymysql模块会向inception发送SHOW WARNINGS语句，导致inception返回一个"Must start as begin statement"错误被archer捕捉到报在日志里  

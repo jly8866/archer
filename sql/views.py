@@ -19,7 +19,7 @@ from .const import Const, WorkflowDict
 from .sendmail import MailSender
 from .inception import InceptionDao
 from .aes_decryptor import Prpcrypt
-from .models import users, master_config, AliyunRdsConfig, workflow, slave_config, QueryPrivileges
+from .models import users, master_config, AliyunRdsConfig, workflow, slave_config, QueryPrivileges, QueryPrivilegesApply
 from .workflow import Workflow
 from .permission import role_required, superuser_required
 import logging
@@ -46,9 +46,9 @@ def logout(request):
 
 
 # SQL上线工单页面
-def allworkflow(request):
+def sqlworkflow(request):
     context = {'currentMenu': 'allworkflow'}
-    return render(request, 'allWorkflow.html', context)
+    return render(request, 'sqlworkflow.html', context)
 
 
 # 提交SQL的页面
@@ -61,27 +61,25 @@ def submitSql(request):
     listAllClusterName = [master.cluster_name for master in masters]
 
     dictAllClusterDb = OrderedDict()
-    try:
-        # 每一个都首先获取主库地址在哪里
-        for clusterName in listAllClusterName:
-            listMasters = master_config.objects.filter(cluster_name=clusterName)
-            # 取出该集群的名称以及连接方式，为了后面连进去获取所有databases
-            masterHost = listMasters[0].master_host
-            masterPort = listMasters[0].master_port
-            masterUser = listMasters[0].master_user
-            masterPassword = prpCryptor.decrypt(listMasters[0].master_password)
-
+    # 每一个都首先获取主库地址在哪里
+    for clusterName in listAllClusterName:
+        listMasters = master_config.objects.filter(cluster_name=clusterName)
+        # 取出该集群的名称以及连接方式，为了后面连进去获取所有databases
+        masterHost = listMasters[0].master_host
+        masterPort = listMasters[0].master_port
+        masterUser = listMasters[0].master_user
+        masterPassword = prpCryptor.decrypt(listMasters[0].master_password)
+        try:
             listDb = dao.getAlldbByCluster(masterHost, masterPort, masterUser, masterPassword)
             dictAllClusterDb[clusterName] = listDb
-    except Exception as msg:
-        context = {'errMsg': str(msg)}
-        return render(request, 'error.html', context)
+        except Exception as msg:
+            dictAllClusterDb[clusterName] = [str(msg)]
 
     # 获取所有审核人，当前登录用户不可以审核
     loginUser = request.session.get('login_username', False)
     reviewMen = users.objects.filter(role__in=['审核人', 'DBA']).exclude(username=loginUser)
 
-    context = {'currentMenu': 'submitsql', 'dictAllClusterDb': dictAllClusterDb, 'reviewMen': reviewMen}
+    context = {'currentMenu': 'allworkflow', 'dictAllClusterDb': dictAllClusterDb, 'reviewMen': reviewMen}
     return render(request, 'submitSql.html', context)
 
 
@@ -467,12 +465,6 @@ def rollback(request):
     return render(request, 'rollback.html', context)
 
 
-# ldap用户同步
-def ldapsync(request):
-    context = {'currentMenu': 'ldapsync'}
-    return render(request, 'ldapsync.html', context)
-
-
 # SQL审核必读
 def dbaprinciples(request):
     context = {'currentMenu': 'dbaprinciples'}
@@ -522,18 +514,29 @@ def sqladvisor(request):
 
 
 # 查询权限申请列表
-def queryapplylist(request, workflow_id):
-    if workflow_id is None:
-        workflow_id = 0
+def queryapplylist(request):
     slaves = slave_config.objects.all().order_by('cluster_name')
-    # 获取所有集群从库名称
+    # 获取所有实例从库名称
     listAllClusterName = [slave.cluster_name for slave in slaves]
+    if len(slaves) == 0:
+        return HttpResponseRedirect('/admin/sql/slave_config/add/')
 
     # 获取当前审核人信息
     auditors = workflowOb.auditsettings(workflow_type=WorkflowDict.workflow_type['query'])
     context = {'currentMenu': 'queryapply', 'listAllClusterName': listAllClusterName,
-               'workflow_id': workflow_id, 'auditors': auditors}
+               'auditors': auditors}
     return render(request, 'queryapplylist.html', context)
+
+
+# 查询权限申请详情
+def queryapplydetail(request, apply_id):
+    workflowDetail = QueryPrivilegesApply.objects.get(apply_id=apply_id)
+    # 获取当前审核人
+    audit_info = workflowOb.auditinfobyworkflow_id(workflow_id=apply_id,
+                                                   workflow_type=WorkflowDict.workflow_type['query'])
+
+    context = {'currentMenu': 'queryapply', 'workflowDetail': workflowDetail, 'audit_info': audit_info}
+    return render(request, 'queryapplydetail.html', context)
 
 
 # 用户的查询权限管理
@@ -586,4 +589,4 @@ def workflowsdetail(request, audit_id):
     # 按照不同的workflow_type返回不同的详情
     auditInfo = workflowOb.auditinfo(audit_id)
     if auditInfo.workflow_type == WorkflowDict.workflow_type['query']:
-        return HttpResponseRedirect(reverse('sql:queryapplylist', args=(auditInfo.workflow_id,)))
+        return HttpResponseRedirect(reverse('sql:queryapplydetail', args=(auditInfo.workflow_id,)))

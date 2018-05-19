@@ -14,29 +14,6 @@
                style="table-layout:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
         </table>
     </div>
-    <!-- 审核信息确认 -->
-    <div class="modal fade" id="auditConfim">
-        <div class="modal-dialog" style="width: 400px">
-            <div class="modal-content message_align">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
-                            aria-hidden="true">×</span></button>
-                    <h4 class="modal-title text-danger">审核确认</h4>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <input type="hidden" id="audit_id">
-                        <textarea id="audit_remark" class="form-control" placeholder="请输入审核备注" rows=4
-                                  required></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" id="reject" onclick="audit(0)" class="btn btn-danger">拒绝</button>
-                    <button type="button" id="pass" onclick="audit(1)" class="btn btn-success">审核通过</button>
-                </div>
-            </div>
-        </div>
-    </div>
 {% endblock content %}
 
 {% block js %}
@@ -72,18 +49,17 @@
                 toolbar: "#toolbar",               //指明自定义的toolbar
                 queryParamsType: 'limit',
                 //请求服务数据时所传参数
-                queryParams:
-                    function (params) {
-                        return {
-                            limit: params.limit,
-                            offset: params.offset,
-                            workflow_type: $("#workflow_type").val(),
-                            search: params.search
-                        }
-                    },
+                queryParams: function (params) {
+                    return {
+                        limit: params.limit,
+                        offset: params.offset,
+                        workflow_type: $("#workflow_type").val(),
+                        search: params.search
+                    }
+                },
                 columns: [{
                     title: '审核id',
-                    field: 'id'
+                    field: 'audit_id'
                 }, {
                     title: '申请类型',
                     field: 'workflow_type',
@@ -94,7 +70,7 @@
                     title: '申请标题',
                     field: 'workflow_title',
                     formatter: function (value, row, index) {
-                        return "<a href='/workflowdetail/" + row.id + "/'>" + value + "</a>";
+                        return "<a href='/workflowdetail/" + row.audit_id + "/'>" + value + "</a>";
                     }
                 }, {
                     title: '申请人',
@@ -126,10 +102,12 @@
                     title: '操作',
                     field: 'id',
                     formatter: function (value, row, index) {
+                        // 当前审核人
                         if (row.current_status === 0 && row.current_audit_user === "{{ loginUserOb.username }}") {
-                            return " <button class=\"btn btn-default btn-xs\" value=\"" + row.id + "\"\n" +
-                                " onclick=\"getaudit_id(value)\" data-toggle=\"modal\" " +
-                                "data-target=\"#auditConfim\">审核\n" + "</button>"
+                            return "<button class=\"btn btn-default btn-xs\" " +
+                                "onclick=\"javascrtpt:window.location.href='/workflowdetail/" + row.audit_id + "/'\">" +
+                                "审核</button>\n"
+
                         }
                     }
                 }],

@@ -150,7 +150,6 @@
                 queryParams:
                     function (params) {
                         return {
-                            workflow_id:{{ workflow_id  }},
                             limit: params.limit,
                             offset: params.offset,
                             search: params.search
@@ -184,12 +183,15 @@
                 },
                 columns: [{
                     title: '工单名称',
-                    field: 'title'
+                    field: 'title',
+                    formatter: function (value, row, index) {
+                        return "<a href='/queryapplydetail/" + row.apply_id + "/'>" + value + "</a>";
+                    }
                 }, {
                     title: '集群',
                     field: 'cluster_name'
                 }, {
-                    title: '数据库',
+                    title: '数据库清单',
                     field: 'db_list',
                     formatter: function (value, row, index) {
                         if (value.length > 30) {
@@ -209,18 +211,6 @@
                         }
                         else {
                             return 'TABLE';
-                        }
-                    }
-                }, {
-                    title: '表清单',
-                    field: 'table_list',
-                    formatter: function (value, row, index) {
-                        if (value.length > 30) {
-                            var table_list = value.substr(0, 30) + '...';
-                            return table_list;
-                        }
-                        else {
-                            return value
                         }
                     }
                 }, {

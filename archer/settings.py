@@ -109,6 +109,11 @@ AUTH_USER_MODEL = "sql.users"
 
 ###############以下部分需要用户根据自己环境自行修改###################
 
+# session 设置
+SESSION_COOKIE_AGE = 60 * 30  # 30分钟
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # 关闭浏览器，则COOKIE失效
+
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
@@ -116,22 +121,22 @@ AUTH_USER_MODEL = "sql.users"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'archer',
-        'USER': 'archer_rw',
-        'PASSWORD': 'archer_rw',
+        'NAME': 'archer_github',
+        'USER': 'root',
+        'PASSWORD': '123456',
         'HOST': '127.0.0.1',
-        'PORT': '5000'
+        'PORT': '3306'
     }
 }
 
 # inception组件所在的地址
-INCEPTION_HOST = '192.168.1.11'
-INCEPTION_PORT = '6100'
+INCEPTION_HOST = '127.0.0.1'
+INCEPTION_PORT = '6669'
 
 # 查看回滚SQL时候会用到，这里要告诉archer去哪个mysql里读取inception备份的回滚信息和SQL.
 # 注意这里要和inception组件的inception.conf里的inception_remote_XX部分保持一致.
 INCEPTION_REMOTE_BACKUP_HOST = '192.168.1.12'
-INCEPTION_REMOTE_BACKUP_PORT = 5621
+INCEPTION_REMOTE_BACKUP_PORT = 3306
 INCEPTION_REMOTE_BACKUP_USER = 'inception'
 INCEPTION_REMOTE_BACKUP_PASSWORD = 'inception'
 
@@ -147,24 +152,30 @@ if ENABLE_LDAP:
     # from django_auth_ldap.config import LDAPSearch, GroupOfNamesType
     from django_auth_ldap.config import LDAPSearch, GroupOfUniqueNamesType
 
+    AUTHENTICATION_BACKENDS = (
+        'django_auth_ldap.backend.LDAPBackend',  # 配置为先使用LDAP认证，如通过认证则不再使用后面的认证方式
+        'django.contrib.auth.backends.ModelBackend',  # sso系统中手动创建的用户也可使用，优先级靠后。注意这2行的顺序
+    )
+
     # if use self signed certificate, Remove AUTH_LDAP_GLOBAL_OPTIONS annotations
     # AUTH_LDAP_GLOBAL_OPTIONS={
     #    ldap.OPT_X_TLS_REQUIRE_CERT: ldap.OPT_X_TLS_NEVER
     # }
-    AUTH_LDAP_BIND_DN = "cn=ro,dc=xxx,dc=cn"
-    AUTH_LDAP_BIND_PASSWORD = "xxxxxx"
-    AUTH_LDAP_SERVER_URI = "ldap://auth.xxx.com"
-    AUTH_LDAP_BASEDN = "ou=users,dc=xxx,dc=cn"
-    AUTH_LDAP_USER_DN_TEMPLATE = "cn=%(user)s,ou=users,dc=xxx,dc=cn"
-    AUTH_LDAP_GROUP_SEARCH = LDAPSearch("ou=groups,dc=xxx,dc=cn",
+
+    AUTH_LDAP_BIND_DN = "cn=xx,dc=xx,dc=xx"
+    AUTH_LDAP_BIND_PASSWORD = "xx"
+    AUTH_LDAP_SERVER_URI = "ldap://ldap.xx.com"
+    AUTH_LDAP_BASEDN = "dc=xx,dc=xx"
+    AUTH_LDAP_USER_DN_TEMPLATE = "cn=%(user)s,ou=xx,dc=xx,dc=xx"
+    AUTH_LDAP_GROUP_SEARCH = LDAPSearch("ou=xx,dc=xx,dc=xx",
                                         ldap.SCOPE_SUBTREE, "(objectClass=groupOfUniqueNames)"
                                         )
     AUTH_LDAP_GROUP_TYPE = GroupOfUniqueNamesType()
-    AUTH_LDAP_USER_ATTRLIST = ["cn", "sn", "mail"]
-    AUTH_LDAP_USER_ATTR_MAP = {
-        "username": "cn",
-        "display": "sn",
-        "email": "mail"
+    AUTH_LDAP_ALWAYS_UPDATE_USER = True  # 每次登录从ldap同步用户信息
+    AUTH_LDAP_USER_ATTR_MAP = {  # key为archer.sql_users字段名，value为ldap中字段名，用于同步用户信息
+        "username": "xx",
+        "display": "xx",
+        "email": "xx"
     }
 
     # AUTH_LDAP_MIRROR_GROUPS = True  # 直接把ldap的组复制到django一份，和AUTH_LDAP_FIND_GROUP_PERMS互斥.用户每次登录会根据ldap来更新数据库的组关系
@@ -216,12 +227,12 @@ LOGGING = {
         # 'django.db': {  # 打印SQL语句到console，方便开发
         #     'handlers': ['console'],
         #     'level': 'DEBUG',
-        #     'propagate': True,
+        #     'propagate': False,
         # },
         'django.request': {  # 打印SQL语句到console，方便开发
             'handlers': ['console'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
         'django_auth_ldap': {  # django_auth_ldap模块相关日志打印到console
             'handlers': ['ldap'],
@@ -232,7 +243,7 @@ LOGGING = {
 }
 
 # 是否开启邮件提醒功能：发起SQL上线后会发送邮件提醒审核人审核，执行完毕会发送给DBA. on是开，off是关，配置为其他值均会被archer认为不开启邮件功能
-MAIL_ON_OFF = 'on'
+MAIL_ON_OFF = 'off'
 
 MAIL_REVIEW_SMTP_SERVER = 'mail.xxx.com'
 MAIL_REVIEW_SMTP_PORT = 25

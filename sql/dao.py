@@ -13,15 +13,15 @@ class Dao(object):
         listDb = []
         conn = None
         cursor = None
-        
+
         try:
             conn = MySQLdb.connect(host=masterHost, port=masterPort, user=masterUser, passwd=masterPassword,
                                    charset='utf8mb4')
             cursor = conn.cursor()
             sql = "show databases"
             n = cursor.execute(sql)
-            listDb = [row[0] for row in cursor.fetchall() 
-                         if row[0] not in ('information_schema', 'performance_schema', 'mysql', 'test')]
+            listDb = [row[0] for row in cursor.fetchall()
+                      if row[0] not in ('information_schema', 'performance_schema', 'mysql', 'test')]
         except MySQLdb.Warning as w:
             raise Exception(w)
         except MySQLdb.Error as e:
@@ -90,7 +90,7 @@ class Dao(object):
         return listCol
 
     # 连进指定的mysql实例里，执行sql并返回
-    def mysql_query(self, masterHost, masterPort, masterUser, masterPassword, dbName, sql, limit_num):
+    def mysql_query(self, masterHost, masterPort, masterUser, masterPassword, dbName, sql, limit_num=0):
         result = {}
         conn = None
         cursor = None
@@ -100,13 +100,16 @@ class Dao(object):
                                    charset='utf8mb4')
             cursor = conn.cursor()
             effect_row = cursor.execute(sql)
-            # rows = cursor.fetchall()
-            rows = cursor.fetchmany(size=int(limit_num))
+            if int(limit_num) > 0:
+                rows = cursor.fetchmany(size=int(limit_num))
+            else:
+                rows = cursor.fetchall()
             fields = cursor.description
 
             column_list = []
-            for i in fields:
-                column_list.append(i[0])
+            if fields:
+                for i in fields:
+                    column_list.append(i[0])
             result = {}
             result['column_list'] = column_list
             result['rows'] = rows

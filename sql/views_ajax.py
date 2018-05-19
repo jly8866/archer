@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.hashers import check_password
+from django.contrib.auth.hashers import make_password
 
 if settings.ENABLE_LDAP:
     from django_auth_ldap.backend import LDAPBackend
@@ -59,39 +59,37 @@ def loginAuthenticate(username, password):
     lockTimeThreshold = settings.LOCK_TIME_THRESHOLD
 
     # 服务端二次验证参数
-    strUsername = username
-    strPassword = password
-
-    if strUsername == "" or strPassword == "" or strUsername is None or strPassword is None:
+    if username == "" or password == "" or username is None or password is None:
         result = {'status': 2, 'msg': '登录用户名或密码为空，请重新输入!', 'data': ''}
-    elif strUsername in login_failure_counter and login_failure_counter[strUsername]["cnt"] >= lockCntThreshold and (
-            datetime.datetime.now() - login_failure_counter[strUsername][
+    elif username in login_failure_counter and login_failure_counter[username]["cnt"] >= lockCntThreshold and (
+            datetime.datetime.now() - login_failure_counter[username][
         "last_failure_time"]).seconds <= lockTimeThreshold:
-        log_mail_record('user:{},login failed, account locking...'.format(strUsername))
+        log_mail_record('user:{},login failed, account locking...'.format(username))
         result = {'status': 3, 'msg': '登录失败超过5次，该账号已被锁定5分钟!', 'data': ''}
     else:
-        correct_users = users.objects.filter(username=strUsername)
-        if len(correct_users) == 1 and correct_users[0].is_active and check_password(strPassword,
-                                                                                     correct_users[0].password) == True:
-            # 调用了django内置函数check_password函数检测输入的密码是否与django默认的PBKDF2算法相匹配
-            if strUsername in login_failure_counter:
-                # 如果登录失败计数器中存在该用户名，则清除之
-                login_failure_counter.pop(strUsername)
-            result = {'status': 0, 'msg': 'ok', 'data': ''}
+        # 登录
+        user = authenticate(username=username, password=password)
+        # 登录成功
+        if user:
+            # 如果登录失败计数器中存在该用户名，则清除之
+            if username in login_failure_counter:
+                login_failure_counter.pop(username)
+            result = {'status': 0, 'msg': 'ok', 'data': user}
+        # 登录失败
         else:
-            if strUsername not in login_failure_counter:
+            if username not in login_failure_counter:
                 # 第一次登录失败，登录失败计数器中不存在该用户，则创建一个该用户的计数器
-                login_failure_counter[strUsername] = {"cnt": 1, "last_failure_time": datetime.datetime.now()}
+                login_failure_counter[username] = {"cnt": 1, "last_failure_time": datetime.datetime.now()}
             else:
-                if (datetime.datetime.now() - login_failure_counter[strUsername][
+                if (datetime.datetime.now() - login_failure_counter[username][
                     "last_failure_time"]).seconds <= lockTimeThreshold:
-                    login_failure_counter[strUsername]["cnt"] += 1
+                    login_failure_counter[username]["cnt"] += 1
                 else:
                     # 上一次登录失败时间早于5分钟前，则重新计数。以达到超过5分钟自动解锁的目的。
-                    login_failure_counter[strUsername]["cnt"] = 1
-                login_failure_counter[strUsername]["last_failure_time"] = datetime.datetime.now()
+                    login_failure_counter[username]["cnt"] = 1
+                login_failure_counter[username]["last_failure_time"] = datetime.datetime.now()
             log_mail_record(
-                'user:{},login failed, fail count:{}'.format(strUsername, login_failure_counter[strUsername]["cnt"]))
+                'user:{},login failed, fail count:{}'.format(username, login_failure_counter[username]["cnt"]))
             result = {'status': 1, 'msg': '用户名或密码错误，请重新输入！', 'data': ''}
     return result
 
@@ -100,41 +98,35 @@ def loginAuthenticate(username, password):
 @csrf_exempt
 def authenticateEntry(request):
     """接收http请求，然后把请求中的用户名密码传给loginAuthenticate去验证"""
-    if request.is_ajax():
-        strUsername = request.POST.get('username')
-        strPassword = request.POST.get('password')
-    else:
-        strUsername = request.POST['username']
-        strPassword = request.POST['password']
+    username = request.POST.get('username')
+    password = request.POST.get('password')
 
-    lockCntThreshold = settings.LOCK_CNT_THRESHOLD
-    lockTimeThreshold = settings.LOCK_TIME_THRESHOLD
-
-    if settings.ENABLE_LDAP:
-        ldap = LDAPBackend()
-        user = ldap.authenticate(username=strUsername, password=strPassword)
-        if strUsername in login_failure_counter and login_failure_counter[strUsername]["cnt"] >= lockCntThreshold and (
-                datetime.datetime.now() - login_failure_counter[strUsername][
-            "last_failure_time"]).seconds <= lockTimeThreshold:
-            log_mail_record('user:{},login failed, account locking...'.format(strUsername))
-            result = {'status': 3, 'msg': '登录失败超过5次，该账号已被锁定5分钟!', 'data': ''}
-            return HttpResponse(json.dumps(result), content_type='application/json')
-        if user and user.is_active:
-            request.session['login_username'] = strUsername
-            # 登录管理后台，避免二次登录
-            user = authenticate(username=strUsername, password=strPassword)
-            if user:
-                login(request, user)
-            result = {'status': 0, 'msg': 'ok', 'data': ''}
-            return HttpResponse(json.dumps(result), content_type='application/json')
-
-    result = loginAuthenticate(strUsername, strPassword)
+    result = loginAuthenticate(username, password)
     if result['status'] == 0:
-        request.session['login_username'] = strUsername
-        # 登录管理后台，避免二次登录
-        user = authenticate(username=strUsername, password=strPassword)
+        # 开启LDAP的认证通过后更新用户密码
+        if settings.ENABLE_LDAP:
+            try:
+                users.objects.get(username=username)
+            except Exception:
+                insert_info = users()
+                insert_info.username = username
+                insert_info.password = make_password(password)
+                insert_info.is_ldapuser = 1
+                insert_info.save()
+            else:
+                replace_info = users.objects.get(username=username)
+                replace_info.password = make_password(password)
+                replace_info.is_ldapuser = 1
+                replace_info.save()
+
+        # 调用了django内置登录方法，防止管理后台二次登录
+        user = authenticate(username=username, password=password)
         if user:
             login(request, user)
+
+        # session保存用户信息
+        request.session['login_username'] = username
+        result = {'status': 0, 'msg': 'ok', 'data': None}
 
     return HttpResponse(json.dumps(result), content_type='application/json')
 
@@ -181,7 +173,7 @@ def sqlworkflow(request):
                 Q(engineer__contains=search) | Q(workflow_name__contains=search)
             ).count()
     elif navStatus in Const.workflowStatus.keys():
-        if loginUserOb.is_superuser == 1:
+        if loginUserOb.is_superuser == 1 or loginUserOb.role == 'DBA':
             listWorkflow = workflow.objects.filter(
                 status=Const.workflowStatus[navStatus]
             ).order_by('-create_time')[offset:limit].values("id", "workflow_name", "engineer", "status",
@@ -207,7 +199,8 @@ def sqlworkflow(request):
 
     result = {"total": listWorkflowCount, "rows": rows}
     # 返回查询结果
-    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True), content_type='application/json')
+    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True),
+                        content_type='application/json')
 
 
 # 提交SQL给inception进行自动审核
@@ -274,40 +267,6 @@ def simplecheck(request):
     finalResult['data']['CheckErrorCount'] = CheckErrorCount
 
     return HttpResponse(json.dumps(finalResult), content_type='application/json')
-
-
-# 同步ldap用户到数据库
-@csrf_exempt
-def syncldapuser(request):
-    ldapback = LDAPBackend()
-    ldap = ldapback.ldap
-    ldapconn = ldap.initialize(settings.AUTH_LDAP_SERVER_URI)
-    tls = getattr(settings, 'AUTH_LDAP_START_TLS', None)
-    if tls:
-        ldapconn.start_tls_s()
-    binddn = settings.AUTH_LDAP_BIND_DN
-    bind_password = settings.AUTH_LDAP_BIND_PASSWORD
-    basedn = settings.AUTH_LDAP_BASEDN
-    ldapconn.simple_bind_s(binddn, bind_password)
-    ldapusers = ldapconn.search_s(basedn, ldap.SCOPE_SUBTREE, 'objectclass=*',
-                                  attrlist=settings.AUTH_LDAP_USER_ATTRLIST)
-    username_field = settings.AUTH_LDAP_USER_ATTR_MAP['username']
-    display_field = settings.AUTH_LDAP_USER_ATTR_MAP['display']
-    email_field = settings.AUTH_LDAP_USER_ATTR_MAP['email']
-    count = 0
-    for user in ldapusers:
-        user_attr = user[1]
-        if user_attr:
-            username = user_attr[username_field][0]
-            display = user_attr[display_field][0]
-            email = user_attr[email_field][0]
-            already_user = users.objects.filter(username=username.decode()).filter(is_ldapuser=True)
-            if len(already_user) == 0:
-                u = users(username=username.decode(), display=display.decode(), email=email.decode(), is_ldapuser=True)
-                u.save()
-                count += 1
-    result = {'msg': '同步{}个用户。'.format(count)}
-    return HttpResponse(json.dumps(result), content_type='application/json')
 
 
 # 请求图表数据
@@ -520,62 +479,8 @@ def workflowlist(request):
     auditlistCount = result['data']['auditlistCount']
 
     # QuerySet 序列化
-    auditlist = serializers.serialize("json", auditlist)
-    auditlist = json.loads(auditlist)
-    list = []
-    for i in range(len(auditlist)):
-        auditlist[i]['fields']['id'] = auditlist[i]['pk']
-        list.append(auditlist[i]['fields'])
-    result = {"total": auditlistCount, "rows": list}
+    rows = [row for row in auditlist]
 
-    result = {"total": auditlistCount, "rows": list}
+    result = {"total": auditlistCount, "rows": rows}
     # 返回查询结果
-    return HttpResponse(json.dumps(result), content_type='application/json')
-
-
-# 工单审核
-@csrf_exempt
-def workflowaudit(request):
-    # 获取用户信息
-    loginUser = request.session.get('login_username', False)
-    result = {'status': 0, 'msg': 'ok', 'data': []}
-
-    audit_id = int(request.POST['audit_id'])
-    audit_status = int(request.POST['audit_status'])
-    audit_remark = request.POST['audit_remark']
-
-    # 获取审核信息
-    auditInfo = workflowOb.auditinfo(audit_id)
-
-    # 使用事务保持数据一致性
-    try:
-        with transaction.atomic():
-            # 调用工作流接口审核
-            auditresult = workflowOb.auditworkflow(audit_id, audit_status, loginUser, audit_remark)
-
-            # 按照审核结果更新业务表审核状态
-            if auditresult['status'] == 0:
-                if auditInfo.workflow_type == WorkflowDict.workflow_type['query']:
-                    # 更新业务表审核状态,插入权限信息
-                    query_audit_call_back(auditInfo.workflow_id, auditresult['data']['workflow_status'])
-
-                    # 给拒绝和审核通过的申请人发送邮件
-                    if hasattr(settings, 'MAIL_ON_OFF') is True and getattr(settings, 'MAIL_ON_OFF') == "on":
-                        email_reciver = users.objects.get(username=auditInfo.create_user).email
-
-                        email_content = "发起人：" + auditInfo.create_user + "\n审核人：" + auditInfo.audit_users \
-                                        + "\n工单地址：" + request.scheme + "://" + request.get_host() + "/workflowdetail/" \
-                                        + str(audit_id) + "\n工单名称： " + auditInfo.workflow_title \
-                                        + "\n审核备注： " + audit_remark
-                        if auditresult['data']['workflow_status'] == WorkflowDict.workflow_status['audit_success']:
-                            email_title = "工单审核通过 # " + str(auditInfo.audit_id)
-                            mailSender.sendEmail(email_title, email_content, [email_reciver])
-                        elif auditresult['data']['workflow_status'] == WorkflowDict.workflow_status['audit_reject']:
-                            email_title = "工单被驳回 # " + str(auditInfo.audit_id)
-                            mailSender.sendEmail(email_title, email_content, [email_reciver])
-    except Exception as msg:
-        result['status'] = 1
-        result['msg'] = str(msg)
-    else:
-        result = auditresult
-    return HttpResponse(json.dumps(result), content_type='application/json')
+    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True), content_type='application/json')

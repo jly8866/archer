@@ -109,7 +109,7 @@ class Workflow(object):
             raise Exception(result['msg'])
 
         # 不同审核状态
-        if audit_status == 1:
+        if audit_status == WorkflowDict.workflow_status['audit_success']:
             # 判断是否还有下一级审核
             if auditInfo.next_audit_user == '-1':
                 # 更新主表审核状态为审核通过
@@ -149,7 +149,7 @@ class Workflow(object):
             # 返回审核结果
             result['data'] = {'workflow_status': auditresult.current_status}
 
-        elif audit_status == 0:
+        elif audit_status == WorkflowDict.workflow_status['audit_reject']:
             # 更新主表审核状态
             auditresult = WorkflowAudit()
             auditresult.audit_id = audit_id
@@ -180,47 +180,59 @@ class Workflow(object):
 
         # 管理员获取所有数据，其他人获取拥有审核权限的数据
         if workflow_type == 0:
-            if loginUserOb.is_superuser:
-                auditlist = WorkflowAudit.objects.all().filter(workflow_title__contains=search).order_by('-audit_id')[
-                            offset:limit]
-                auditlistCount = WorkflowAudit.objects.all().filter(workflow_title__contains=search).order_by(
-                    '-audit_id').count()
-            else:
-                auditlist = WorkflowAudit.objects.filter(workflow_title__contains=search).filter(
-                    Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)).order_by(
-                    '-audit_id')[offset:limit]
-                auditlistCount = WorkflowAudit.objects.filter(workflow_title__contains=search).filter(
-                    Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)).count()
+            auditlist = WorkflowAudit.objects.filter(
+                workflow_title__contains=search
+            ).filter(
+                Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)
+            ).order_by('-audit_id')[offset:limit].values(
+                'audit_id', 'workflow_type', 'workflow_title', 'create_user',
+                'create_time', 'current_status', 'audit_users',
+                'current_audit_user'
+            )
+            auditlistCount = WorkflowAudit.objects.filter(
+                workflow_title__contains=search
+            ).filter(
+                Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)
+            ).count()
         else:
-            if loginUserOb.is_superuser:
-                auditlist = WorkflowAudit.objects.all().filter(workflow_type=workflow_type,
-                                                               workflow_title__contains=search).order_by('-audit_id')[
-                            offset:limit]
-                auditlistCount = WorkflowAudit.objects.all().filter(workflow_type=workflow_type,
-                                                                    workflow_title__contains=search).order_by(
-                    '-audit_id').count()
-            else:
-                auditlist = WorkflowAudit.objects.filter(workflow_type=workflow_type,
-                                                         workflow_title__contains=search).filter(
-                    Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)).order_by(
-                    '-audit_id')[offset:limit]
-                auditlistCount = WorkflowAudit.objects.filter(workflow_type=workflow_type,
-                                                              workflow_title__contains=search).filter(
-                    Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)).count()
+            auditlist = WorkflowAudit.objects.filter(
+                workflow_title__contains=search,
+                workflow_type=workflow_type
+            ).filter(
+                Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)
+            ).order_by('-audit_id')[offset:limit].values(
+                'audit_id', 'workflow_type',
+                'workflow_title', 'create_user',
+                'create_time', 'current_status',
+                'audit_users',
+                'current_audit_user',
+            )
+            auditlistCount = WorkflowAudit.objects.filter(
+                workflow_title__contains=search,
+                workflow_type=workflow_type,
+            ).filter(
+                Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)
+            ).count()
 
         result['data'] = {'auditlist': auditlist, 'auditlistCount': auditlistCount}
         return result
 
     # 通过审核id获取审核信息
     def auditinfo(self, audit_id):
-        return WorkflowAudit.objects.get(audit_id=audit_id)
+        try:
+            return WorkflowAudit.objects.get(audit_id=audit_id)
+        except Exception:
+            return None
 
     # 通过业务id获取审核信息
     def auditinfobyworkflow_id(self, workflow_id, workflow_type):
-        return WorkflowAudit.objects.get(workflow_id=workflow_id, workflow_type=workflow_type)
+        try:
+            return WorkflowAudit.objects.get(workflow_id=workflow_id, workflow_type=workflow_type)
+        except Exception:
+            return None
 
     # 获取审核配置信息
-    def auditsettings(self,workflow_type=None):
+    def auditsettings(self, workflow_type=None):
         try:
             return WorkflowAuditSetting.objects.get(workflow_type=workflow_type).audit_users
         except Exception:
