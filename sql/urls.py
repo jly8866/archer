@@ -74,4 +74,4 @@ if settings.ALIYUN_RDS_MANAGE:
             name='create_kill_session'),
         url(r'^kill_session/$', aliyun_function.kill_session, name='kill_session'),
     ]
-    urlpatterns.append(aliyun_function_url)
+    urlpatterns.extend(aliyun_function_url)
