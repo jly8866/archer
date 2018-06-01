@@ -4,26 +4,28 @@ import MySQLdb
 
 from django.db import connection
 
+
 class Dao(object):
     _CHART_DAYS = 90
 
-    #连进指定的mysql实例里，读取所有databases并返回
+    # 连进指定的mysql实例里，读取所有databases并返回
     def getAlldbByCluster(self, masterHost, masterPort, masterUser, masterPassword):
         listDb = []
         conn = None
         cursor = None
-        
+
         try:
-            conn=MySQLdb.connect(host=masterHost, port=masterPort, user=masterUser, passwd=masterPassword, charset='utf8mb4')
+            conn = MySQLdb.connect(host=masterHost, port=masterPort, user=masterUser, passwd=masterPassword,
+                                   charset='utf8mb4')
             cursor = conn.cursor()
             sql = "show databases"
             n = cursor.execute(sql)
-            listDb = [row[0] for row in cursor.fetchall() 
-                         if row[0] not in ('information_schema', 'performance_schema', 'mysql', 'test')]
+            listDb = [row[0] for row in cursor.fetchall()
+                      if row[0] not in ('information_schema', 'performance_schema', 'mysql', 'test')]
         except MySQLdb.Warning as w:
-            print(str(w))
+            raise Exception(w)
         except MySQLdb.Error as e:
-            print(str(e))
+            raise Exception(e)
         finally:
             if cursor is not None:
                 cursor.close()
@@ -49,9 +51,9 @@ class Dao(object):
                       if row[0] not in (
                           'test')]
         except MySQLdb.Warning as w:
-            print(str(w))
+            raise Exception(w)
         except MySQLdb.Error as e:
-            print(str(e))
+            raise Exception(e)
         finally:
             if cursor is not None:
                 cursor.close()
@@ -76,9 +78,9 @@ class Dao(object):
             n = cursor.execute(sql)
             listCol = [row[0] for row in cursor.fetchall()]
         except MySQLdb.Warning as w:
-            print(str(w))
+            raise Exception(w)
         except MySQLdb.Error as e:
-            print(str(e))
+            raise Exception(e)
         finally:
             if cursor is not None:
                 cursor.close()
@@ -88,7 +90,7 @@ class Dao(object):
         return listCol
 
     # 连进指定的mysql实例里，执行sql并返回
-    def mysql_query(self, masterHost, masterPort, masterUser, masterPassword, dbName, sql, limit_num):
+    def mysql_query(self, masterHost, masterPort, masterUser, masterPassword, dbName, sql, limit_num=0):
         result = {}
         conn = None
         cursor = None
@@ -98,13 +100,16 @@ class Dao(object):
                                    charset='utf8mb4')
             cursor = conn.cursor()
             effect_row = cursor.execute(sql)
-            # rows = cursor.fetchall()
-            rows = cursor.fetchmany(size=int(limit_num))
+            if int(limit_num) > 0:
+                rows = cursor.fetchmany(size=int(limit_num))
+            else:
+                rows = cursor.fetchall()
             fields = cursor.description
 
             column_list = []
-            for i in fields:
-                column_list.append(i[0])
+            if fields:
+                for i in fields:
+                    column_list.append(i[0])
             result = {}
             result['column_list'] = column_list
             result['rows'] = rows
@@ -120,20 +125,25 @@ class Dao(object):
             if cursor is not None:
                 cursor.close()
             if conn is not None:
-                conn.rollback()
-                conn.close()
+                try:
+                    conn.rollback()
+                    conn.close()
+                except:
+                    conn.close()
         return result
 
     def getWorkChartsByMonth(self):
         cursor = connection.cursor()
-        sql = "select date_format(create_time, '%%m-%%d'),count(*) from sql_workflow where create_time>=date_add(now(),interval -%s day) group by date_format(create_time, '%%m-%%d') order by 1 asc;" % (Dao._CHART_DAYS)
+        sql = "select date_format(create_time, '%%m-%%d'),count(*) from sql_workflow where create_time>=date_add(now(),interval -%s day) group by date_format(create_time, '%%m-%%d') order by 1 asc;" % (
+            Dao._CHART_DAYS)
         cursor.execute(sql)
         result = cursor.fetchall()
         return result
 
     def getWorkChartsByPerson(self):
         cursor = connection.cursor()
-        sql = "select engineer, count(*) as cnt from sql_workflow where create_time>=date_add(now(),interval -%s day) group by engineer order by cnt desc limit 50;" % (Dao._CHART_DAYS)
+        sql = "select engineer, count(*) as cnt from sql_workflow where create_time>=date_add(now(),interval -%s day) group by engineer order by cnt desc limit 50;" % (
+            Dao._CHART_DAYS)
         cursor.execute(sql)
         result = cursor.fetchall()
         return result

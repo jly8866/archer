@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 from .inception import InceptionDao
 from .models import DataMaskingRules, DataMaskingColumns
-import json
+import simplejson as json
 import re
 
 inceptionDao = InceptionDao()
@@ -12,7 +12,13 @@ class Masking(object):
     def data_masking(self, cluster_name, db_name, sql, sql_result):
         result = {'status': 0, 'msg': 'ok', 'data': []}
         # 通过inception获取语法树,并进行解析
-        print_info = self.query_tree(sql, cluster_name, db_name)
+        try:
+            print_info = self.query_tree(sql, cluster_name, db_name)
+        except Exception as msg:
+            result['status'] = 1
+            result['msg'] = str(msg)
+            return result
+
         if print_info is None:
             result['status'] = 1
             result['msg'] = 'inception返回的结果集为空！可能是SQL语句有语法错误'
@@ -79,7 +85,13 @@ class Masking(object):
     # 解析语法树，获取语句涉及的表，用于查询权限限制
     def query_table_ref(self, sqlContent, cluster_name, dbName):
         result = {'status': 0, 'msg': 'ok', 'data': []}
-        print_info = self.query_tree(sqlContent, cluster_name, dbName)
+        try:
+            print_info = self.query_tree(sqlContent, cluster_name, dbName)
+        except Exception as msg:
+            result['status'] = 1
+            result['msg'] = str(msg)
+            return result
+
         if print_info is None:
             result['status'] = 1
             result['msg'] = 'inception返回的结果集为空！可能是SQL语句有语法错误'
@@ -244,19 +256,24 @@ class Masking(object):
         return hit_columns_info
 
     # 利用正则表达式脱敏数据
-    def regex(self, DataMaskingRulesOb, rule_type, str):
-        rule_regex = ''
-        for rules_info in DataMaskingRulesOb:
-            if rules_info.rule_type == rule_type:
-                rule_regex = rules_info.rule_regex
-        # 正则匹配必须分组，且只显示第一组匹配的信息，第一组后面的用****代替
-        try:
-            p = re.compile(rule_regex)
-            m = p.search(str)
-        except Exception:
-            return str
+    def regex(self, DataMaskingRulesOb, rule_type, value):
+        rules_info = DataMaskingRulesOb.get(rule_type=rule_type)
+        if rules_info:
+            rule_regex = rules_info.rule_regex
+            hide_group = rules_info.hide_group
+            # 正则匹配必须分组，隐藏的组会使用****代替
+            try:
+                p = re.compile(rule_regex)
+                m = p.search(str(value))
+                masking_str = ''
+                for i in range(m.lastindex):
+                    if i == hide_group - 1:
+                        group = '****'
+                    else:
+                        group = m.group(i + 1)
+                    masking_str = masking_str + group
+                return masking_str
+            except Exception:
+                return value
         else:
-            if m:
-                if len(m.groups()) > 0:
-                    return m.group(1) + '****'
-            return str
+            return value

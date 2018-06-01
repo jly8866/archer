@@ -62,7 +62,7 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="privilege_id">
-                    <p>删除后用户将无法查询该表数据，确定删除吗？</p>
+                    <p>删除后用户将无法查询数据，确定删除吗？</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-info" data-dismiss="modal">取消</button>
@@ -136,6 +136,17 @@
                     title: '数据库',
                     field: 'db_name'
                 }, {
+                    title: '权限级别',
+                    field: 'priv_type',
+                    formatter: function (value, row, index) {
+                        if (value === 1) {
+                            return 'DATABASE';
+                        }
+                        else {
+                            return 'TABLE';
+                        }
+                    }
+                }, {
                     title: '表',
                     field: 'table_name'
                 }, {
@@ -205,7 +216,6 @@
                     },
                     complete: function () {
                         $('button[type=button]').removeClass('disabled');
-                        $('button[type=button]').addClass('btn');
                         $('button[type=button]').prop('disabled', false);
                     },
                     success: function (data) {
