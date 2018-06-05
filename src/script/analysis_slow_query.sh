@@ -23,7 +23,6 @@ pt_query_digest="/usr/local/bin/pt-query-digest"
 #config server_id
 hostname="${mysql_host}:${mysql_port}" # 用于archer做筛选
 
-
 #collect mysql slowquery log into monitor database
 #RDS需要增加--no-version-check选项
 $pt_query_digest \
@@ -32,7 +31,7 @@ $pt_query_digest \
 --review h=$monitor_db_host,D=$monitor_db_database,t=mysql_slow_query_review  \
 --history h=$monitor_db_host,D=$monitor_db_database,t=mysql_slow_query_review_history  \
 --no-report --limit=100% --charset=utf8 \
---filter="\$event->{Byes} = length(\$event->{arg}) and \$event->{hostname}=\"$hostname\"  and \$event->{client}=\$event->{ip} " \
+--filter="\$event->{Bytes} = length(\$event->{arg}) and \$event->{hostname}=\"$hostname\"  and \$event->{client}=\$event->{ip} " \
 $slowquery_file > /tmp/analysis_slow_query.log
 
 ##### set a new slow query log ###########

@@ -48,7 +48,7 @@
 
 ## 设计规范
 * 合理的数据库设计和规范很有必要，尤其是MySQL数据库，内核没有oracle、db2、SQL Server等数据库这么强大，需要合理设计，扬长避短。互联网业界有成熟的MySQL设计规范，特此撰写如下。请读者在公司上线使用archer系统之前由专业DBA给所有后端开发人员培训一下此规范，做到知其然且知其所以然。  
-下载链接：  https://github.com/jly8866/archer/blob/master/src/docs/mysql_db_design_guide.docx
+下载链接：  https://github.com/jly8866/archer/blob/master/src/docs/mysql_db_design_guide.md
 
 ## 主要配置文件
 * archer/archer/settings.py  
@@ -56,7 +56,7 @@
 ## 2.0更新说明
 #### 更新内容
 - 新增  
->增加DBA角色，SQL上线逻辑调整为：工程师提SQL->审核人审核->DBA执行，同时也支持DBA一个角色的审核和执行    
+>增加DBA角色，SQL上线逻辑调整为：工程师提SQL->审核人审核->DBA执行，同时也支持DBA一个角色同时负责审核和执行    
 >增加定时执行SQL工单，将审核和执行分离   
 >增加SQL在线查询模块，支持查询权限申请、审核、管理，支持查询动态脱敏，保护隐私数据，可配置，默认不展示    
 >增加SQL慢日志收集管理模块，可配置，默认不展示    
@@ -108,13 +108,8 @@
 2. 安装python3，版本号>=3.4：(由于需要修改官方模块，请使用virtualenv或venv等单独隔离环境！)
 3. 安装所需相关模块：  
 `pip3 install -r requirements.txt`  
-4. MySQLdb模块兼容inception版本信息
-由于python3使用的pymysql模块里并未兼容inception返回的server信息，因此需要编辑/pymysql/connections.py
-在if int(self.server_version.split('.', 1)[0]) >= 5: 这一行之前加上以下这一句并保存，记得别用tab键用4个空格缩进：
-self.server_version = '5.6.24-72.2-log'
-最后看起来像这样：
-![image](https://github.com/jly8866/archer/raw/master/screenshots/pymysql.png)  
-或者直接使用src/docker/pymysql目录下的文件替换/path/to/python3/lib/python3.4/site-packages/pymysql/对应文件即可
+4. MySQLdb模块兼容inception版本信息  
+使用src/docker/pymysql目录下的文件替换/path/to/python3/lib/python3.4/site-packages/pymysql/对应文件
 
 ## 启动前准备
 1. 创建archer本身的数据库表：  
@@ -132,19 +127,17 @@ self.server_version = '5.6.24-72.2-log'
     `bash debug.sh`  
 (2)用gunicorn+nginx启动服务  
     安装模块
-    `gunicorn==19.7.1`
+    `pip3 install gunicorn==19.7.1`
     nginx配置示例  
     
     ```
     server{
             listen 9123; #监听的端口
             server_name archer;
-            client_header_timeout 1200; #超时时间与gunicorn超时时间设置一致
-            client_body_timeout 1200;
-            proxy_read_timeout 1200;
+            proxy_read_timeout 600s;  #超时时间与gunicorn超时时间设置一致，主要用于在线查询
 
             location / {
-              proxy_pass http://127.0.0.1:8000;
+              proxy_pass http://127.0.0.1:8888;
               proxy_set_header Host $host;
               proxy_set_header X-Real-IP $remote_addr;
               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -179,7 +172,7 @@ self.server_version = '5.6.24-72.2-log'
 ### 慢日志管理
 1. settings中SLOWQUERY改为True  
 2. 安装percona-toolkit（版本>3.0），以centos为例   
- 
+
     ```
     yum -y install http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm 
     yum -y install percona-toolkit.x86_64 
@@ -220,18 +213,6 @@ pip install django-auth-ldap==1.3.0
 2. 如果使用了ldaps，并且是自签名证书，需要打开settings中AUTH_LDAP_GLOBAL_OPTIONS的注释  
 3. settings中以AUTH_LDAP开头的配置，需要根据自己的ldap对应修改     
 
-## 部分功能使用说明
-1. 用户角色配置  
-  在【后台数据管理】-【用户配置】页面管理用户，或者使用LADP导入，至少拥有一个工程师角色（engineer）、一个DBA角色才可以进行SQL上线
-  工程师可以发起SQL上线，审核人/DBA进行审核，DBA进行执行，超级管理员可以登录admin界面进行管理
-2. 配置主库地址  
-  在【后台数据管理】-【主库地址配置】页面管理主库  
-  主库地址用于SQL上线，DDL、DML、慢日志查看、SQL优化等功能
-3. 配置从库地址    
-  在【后台数据管理】-【从库地址配置】页面管理从库  
-  从库地址用于SQL查询功能  
-4. 配置查询权限审核流程  
-  在【后台数据管理】-【工作流配置】页面管理审核流程   
 
 ## 系统展示截图：
 1. 工单展示页  
@@ -305,15 +286,16 @@ archer会默认过滤一些系统数据库，过滤列表为`'information_schema
 3. 检测SQL报错  
 3.1. invalid literal for int() with base 10:'Inception2'    
 调整pymysql使其兼容Inception版本信息，  
-使用src/docker/pymysql目录下的文件替换/path/to/python3/lib/python3.4/site-packages/pymysql/目录下的文件，或者按照安装文档修改  
+使用src/docker/pymysql目录下的文件替换/path/to/python3/lib/python3.4/site-packages/pymysql/目录下的文件  
 3.2. invalid source infomation  
 inception用来审核的账号，密码不能包含*  
 3.3. Must start as begin statement    
-inception用来审核的账号或者密码不正确   
+python3的pymysql模块会向inception发送SHOW WARNINGS语句，导致inception返回一个"Must start as begin statement"错误被archer捕捉到报在日志里  
+使用src/docker/pymysql目录下的文件替换/path/to/python3/lib/python3.4/site-packages/pymysql/目录下的文件  
 3.4. Incorrect database name ''  
 inception检查不支持子查询  
 3.5. Invalid remote backup information  
-原因暂时不明  
+inception无法连接备份库
 
 #### 无法生成回滚语句
 1. 检查配置文件里面inception相关配置  
@@ -328,20 +310,11 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER,REPLICATION CLIENT,REP
 GRANT SELECT ON *.* TO 'archer_read'
 
 ```
-3. 检查binlog格式，需要为ROW  
-4. 检查DML的表是否存在主键  
+3. 检查binlog格式，需要为ROW，binlog_row_image为FULL  
+4. 检查DML的表是否存在主键   
+5. 检查语句是否有影响数据  
 
 #### 定时任务  
 1. 未执行  
 检查django-apscheduler相关表是否有创建，可使用`python3 manage.py migrate`创建  
-
-
-#### 其他错误：    
-![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug1.png)  
-![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug2.png)  
-原因：python3的pymysql模块会向inception发送SHOW WARNINGS语句，导致inception返回一个"Must start as begin statement"错误被archer捕捉到报在日志里  
-解决：如果实在忍受不了，请修改/path/to/python3/lib/python3.4/site-packages/pymysql/cursors.py:338行，将self._show_warnings()这一句注释掉，换成pass，如下：    
-![image](https://github.com/hhyo/archer/blob/master/src/screenshots/bugs/bug3.png)  
-但是此方法有副作用，会导致所有调用该pymysql模块的程序不能show warnings，因此强烈推荐使用virtualenv或venv环境！
-
 
