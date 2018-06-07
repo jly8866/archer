@@ -90,6 +90,7 @@ if settings.DATA_MASKING_ON_OFF:
         list_display = (
             'column_id', 'rule_type', 'active', 'cluster_name', 'table_schema', 'table_name', 'column_name',
             'create_time',)
+        search_fields = ['cluster_name', 'table_schema', 'table_name', 'column_name']
 
 
     # 脱敏规则页面定义

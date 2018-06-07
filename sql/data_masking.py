@@ -99,8 +99,16 @@ class Masking(object):
             result['status'] = 2
             result['msg'] = 'inception返回异常：\n' + print_info['errmsg']
         else:
-            table_ref = json.loads(print_info['query_tree'])['table_ref']
-            result['data'] = table_ref
+            try:
+                table_ref = json.loads(print_info['query_tree'])['table_ref']
+            except Exception:
+                # 处理JSONDecodeError: Expecting property name enclosed in double quotes
+                # json出现{"a":1,}、["a":1,]、{'a':1}
+                query_tree_str = re.sub(r"(,?)(\w+?)\s*?:", r"\1'\2':", print_info['query_tree'])
+                query_tree_str = re.sub(r",\s*?]", "]", query_tree_str)
+                query_tree_str = re.sub(r",\s*?}", "}", query_tree_str)
+                query_tree_str = query_tree_str.replace("'", "\"")
+                table_ref = json.loads(query_tree_str)['table_ref']
         return result
 
     # 解析query_tree,获取语句信息,并返回命中脱敏规则的列信息

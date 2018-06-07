@@ -77,7 +77,7 @@ def submitSql(request):
 
     # 获取所有审核人，当前登录用户不可以审核
     loginUser = request.session.get('login_username', False)
-    reviewMen = users.objects.filter(role__in=['审核人', 'DBA']).exclude(username=loginUser)
+    reviewMen = users.objects.filter(role__in=['审核人', 'DBA'])
 
     context = {'currentMenu': 'allworkflow', 'dictAllClusterDb': dictAllClusterDb, 'reviewMen': reviewMen}
     return render(request, 'submitSql.html', context)

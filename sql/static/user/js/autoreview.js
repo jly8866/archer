@@ -115,7 +115,7 @@ function autoreview() {
                         sortable: true,                     //是否启用排序
                         //sortOrder: "desc",                   //排序方式
                         //sortName: 'errormessage',           //排序字段
-                        pagination: false,                   //是否显示分页（*）
+                        pagination: true,                   //是否显示分页（*）
                         sidePagination: "client",           //分页方式：client客户端分页，server服务端分页（*）
                         pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
                         pageSize: 500,                     //每页的记录行数（*）

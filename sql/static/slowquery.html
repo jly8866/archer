@@ -323,8 +323,8 @@
                                 }
                             },
                         formatter: function (value, row, index) {
-                            if (value.length > 500) {
-                                var sql = value.substr(0, 500) + '...';
+                            if (value.length > 80) {
+                                var sql = value.substr(0, 808) + '...';
                                 return sql;
                             }
                             else {
@@ -435,8 +435,8 @@
                         title: 'SQL语句',
                         field: 'SQLText',
                         formatter: function (value, row, index) {
-                            if (value.length > 100) {
-                                var sql = value.substr(0, 100) + '...';
+                            if (value.length > 80) {
+                                var sql = value.substr(0, 80) + '...';
                                 return sql;
                             }
                             else {
