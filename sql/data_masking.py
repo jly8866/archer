@@ -109,6 +109,7 @@ class Masking(object):
                 query_tree_str = re.sub(r",\s*?}", "}", query_tree_str)
                 query_tree_str = query_tree_str.replace("'", "\"")
                 table_ref = json.loads(query_tree_str)['table_ref']
+            result['data'] = table_ref
         return result
 
     # 解析query_tree,获取语句信息,并返回命中脱敏规则的列信息
