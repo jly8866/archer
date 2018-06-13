@@ -1,5 +1,20 @@
 # archer
-基于inception的自动化SQL操作平台，支持工单、审核、定时任务、邮件、OSC等功能，额外可配置功能有MySQL查询、动态脱敏、查询权限管理、慢查询管理、阿里云RDS管理等
+基于inception的自动化SQL操作平台，支持工单、审核、定时任务、邮件、OSC等功能，还可配置MySQL查询、慢查询管理、会话管理等
+
+****
+## 目录
+* [主要功能](#主要功能)
+* [在线体验](#点击体验)
+* [安装](#采取docker部署)
+    * [docker部署](#采取docker部署)
+    * [手动安装](#手动安装步骤)
+* [运行](#启动前准备)
+* [功能集成](#其他功能集成) 
+    * [在线查询&脱敏查询](#在线查询&脱敏查询)
+    * [慢日志管理](#慢日志管理)
+    * [SQLAdvisor优化工具](#SQLAdvisor优化工具)
+    * [阿里云rds管理](#阿里云rds管理)
+* [Q&A](#部分问题解决办法 )
 
 ### 开发语言和推荐环境
     python3.4及以上  
@@ -158,7 +173,7 @@
     ```
 
 ### 集成ldap
-1. 修改配置文件ENABLE_LDAP=True，安装相关模块，可以启用ldap账号登陆，以centos为例
+1. 修改配置文件ENABLE_LDAP=True，安装相关模块，可以启用ldap账号登录，以centos为例
     ```
     yum install openldap-devel
     pip install django-auth-ldap==1.3.0
@@ -169,11 +184,17 @@
 
 ## 系统体验
 [点击体验](http://54.169.188.51:9123/sqlquery/)  
-管理员账号archer:archer
+  
+|  角色 | 账号 | 密码 |
+| --- | --- | --- |
+|  管理员| archer | archer |
+|  工程师| engineer | archer |
+|  审核人| auditor | archer |
+|  DBA| dba | archer |
 
 ## 部分问题解决办法  
 ### 查看错误日志
-    `/tmp/default.log &  /tmp/archer.err`
+```/tmp/default.log &  /tmp/archer.err```
 #### 页面样式显示异常  
 - **runserver/debug.sh启动**  
 settings里面关闭了debug，即DEBUG = False，需要在启动命令后面增加 --insecure，变成  
@@ -188,15 +209,18 @@ nginx的静态资源配置不正确
 - 偶现添加用户报错  
 采用nginx+gunicorn/startup.sh启动，多worker的部署可能出现，目前问题没有解决 
 - 无法登录（确认用户名和密码正确）  
-检查用户is_active字段是否为1，django自带认证默认is_active约束是否可以登录前台，is_status约束是否可以登录后台管理  
+检查用户is_active字段是否为1
 
 #### SQL上线
 - 集群不显示数据库  
 archer会默认过滤一些系统数据库，过滤列表为`'information_schema', 'performance_schema', 'mysql', 'test', 'sys'`  
-主库配置的用户名或密码错误  
 
-#### 审核人不显示
-- 没有审核人/DBA角色的有效用户    
+- 审核人不显示  
+没有为审核人/DBA角色的有效用户    
+
+- 审核通过后没有执行按钮  
+archer的SQL上线流程为：工程师提交SQL->审核人审核->DBA执行，审核人只能审核归属自己审核的数据，DBA执行全部数据
+
 
 #### 检测SQL报错  
 - **invalid literal for int() with base 10:'Inception2'**    
@@ -216,11 +240,11 @@ inception无法连接备份库
 - 检查配置文件里面inception相关配置  
 - 检查inception审核用户和备份用户权限，权限参考    
     ```
-    — inception备份用户
+    — inception备份用户（主库配置用户，如果要使用会话管理需要赋予SUPER权限）
     GRANT SELECT, INSERT, CREATE ON *.* TO 'inception_bak'
     — inception审核用户（各个业务实例，如果需要使用OSC，请额外配置权限）
     GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER,REPLICATION CLIENT,REPLICATION SLAVE ON *.* TO 'inception'
-    — archer在线查询用户
+    — archer在线查询用户（从库配置用户）
     GRANT SELECT ON *.* TO 'archer_read'
     ```
 - 检查binlog格式，需要为ROW，binlog_row_image为FULL  
