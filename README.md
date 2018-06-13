@@ -12,7 +12,7 @@
 * [功能集成](#其他功能集成) 
     * [在线查询&脱敏查询](#在线查询)
     * [慢日志管理](#慢日志管理)
-    * [SQLAdvisor优化工具](#SQL优化工具)
+    * [SQL优化工具](#SQLAdvisor优化工具)
     * [阿里云rds管理](#阿里云rds管理)
 * [Q&A](#部分问题解决办法 )
 
@@ -150,7 +150,7 @@
 3. 使用src/script/mysql_slow_query_review.sql创建慢日志收集表到archer数据库
 4. 将src/script/analysis_slow_query.sh部署到各个监控机器，注意修改脚本里面的 `hostname="${mysql_host}:${mysql_port}" `与archer主库配置信息一致，否则将无法筛选到相关记录
 
-### SQL优化工具
+### SQLAdvisor优化工具
 1. 安装SQLAdvisor，[项目地址](https://github.com/Meituan-Dianping/SQLAdvisor)
 2. 修改配置文件SQLADVISOR为程序路径，路径需要完整，如'/opt/SQLAdvisor/sqladvisor/sqladvisor'  
 
@@ -221,7 +221,6 @@ archer会默认过滤一些系统数据库，过滤列表为`'information_schema
 - 审核通过后没有执行按钮  
 archer的SQL上线流程为：工程师提交SQL->审核人审核->DBA执行，审核人只能审核归属自己审核的数据，DBA执行全部数据
 
-
 #### 检测SQL报错  
 - **invalid literal for int() with base 10:'Inception2'**    
 调整pymysql使其兼容Inception版本信息，  
@@ -250,6 +249,11 @@ inception无法连接备份库
 - 检查binlog格式，需要为ROW，binlog_row_image为FULL  
 - 检查DML的表是否存在主键   
 - 检查语句是否有影响数据  
+
+#### 查询权限管理
+- 查询权限管理的审批流程和SQL上线是隔离的，需要到后台数据管理进行配置
+- 审核人看不到待审核工单  
+代办列表被隐藏至右上角的消息图标中，当有待审核信息是会显示图标，可以进入查看待办数据
 
 #### 定时任务  
 - 未执行  

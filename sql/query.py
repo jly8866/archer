@@ -491,15 +491,19 @@ def getuserprivileges(request):
     if loginUserOb.is_superuser == 1 or loginUserOb.role == 'DBA':
         if user_name != 'all':
             privilegeslist = QueryPrivileges.objects.all().filter(user_name=user_name, is_deleted=0,
-                                                                  table_name__contains=search).order_by(
+                                                                  table_name__contains=search,
+                                                                  valid_date__gte=datetime.datetime.now()).order_by(
                 '-privilege_id')[offset:limit]
             privilegeslistCount = QueryPrivileges.objects.all().filter(user_name=user_name, is_deleted=0,
-                                                                       table_name__contains=search).count()
+                                                                       table_name__contains=search,
+                                                                       valid_date__gte=datetime.datetime.now()).count()
         else:
-            privilegeslist = QueryPrivileges.objects.all().filter(is_deleted=0, table_name__contains=search).order_by(
+            privilegeslist = QueryPrivileges.objects.all().filter(is_deleted=0, table_name__contains=search,
+                                                                  valid_date__gte=datetime.datetime.now()).order_by(
                 '-privilege_id')[offset:limit]
             privilegeslistCount = QueryPrivileges.objects.all().filter(is_deleted=0,
-                                                                       table_name__contains=search).count()
+                                                                       table_name__contains=search,
+                                                                       valid_date__gte=datetime.datetime.now()).count()
     else:
         privilegeslist = QueryPrivileges.objects.filter(user_name=loginUserOb.username, is_deleted=0).filter(
             table_name__contains=search).order_by('-privilege_id')[offset:limit]

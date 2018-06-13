@@ -556,8 +556,8 @@ def diagnosis_process(request):
     loginUser = request.session.get('login_username', False)
     loginUserOb = users.objects.get(username=loginUser)
 
-    # 获取所有集群名称
-    masters = AliyunRdsConfig.objects.all().order_by('cluster_name')
+    # 获取所有实例名称
+    masters = master_config.objects.all().order_by('cluster_name')
     cluster_name_list = [master.cluster_name for master in masters]
 
     context = {'currentMenu': 'diagnosis', 'tab': 'process', 'cluster_name_list': cluster_name_list,
