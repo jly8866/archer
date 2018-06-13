@@ -18,7 +18,7 @@ leftMenuBtnsCommon = (
 
 leftMenuBtnsSuper = (
     {'key': 'diagnosis', 'name': '主库会话管理', 'url': '/diagnosis_process/', 'class': 'glyphicon  glyphicon-scissors',
-     'display': settings.ALIYUN_RDS_MANAGE},
+     'display': True},
     {'key': 'admin', 'name': '后台数据管理', 'url': '/admin/', 'class': 'glyphicon glyphicon-list', 'display': True},
 )
 

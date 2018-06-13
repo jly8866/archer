@@ -4,15 +4,15 @@
 ****
 ## 目录
 * [主要功能](#主要功能)
-* [在线体验](#点击体验)
+* [在线体验](#系统体验)
 * [安装](#采取docker部署)
     * [docker部署](#采取docker部署)
     * [手动安装](#手动安装步骤)
 * [运行](#启动前准备)
 * [功能集成](#其他功能集成) 
-    * [在线查询&脱敏查询](#在线查询&脱敏查询)
+    * [在线查询&脱敏查询](#在线查询)
     * [慢日志管理](#慢日志管理)
-    * [SQLAdvisor优化工具](#SQLAdvisor优化工具)
+    * [SQLAdvisor优化工具](#SQL优化工具)
     * [阿里云rds管理](#阿里云rds管理)
 * [Q&A](#部分问题解决办法 )
 
@@ -79,7 +79,7 @@
     source venv4archer/bin/activate
     pip3 install -r requirements.txt
     ```
-4. MySQLdb模块兼容inception版本信息  
+4. pymysql模块兼容inception版本信息  
 使用src/docker/pymysql目录下的文件替换/path/to/python3/lib/python3.4/site-packages/pymysql/对应文件
 
 ## 启动前准备
@@ -133,7 +133,7 @@
     使用上面创建的管理员账号登录`http://X.X.X.X:port/login/`   
     
 ## 其他功能集成
-### 在线查询&脱敏查询
+### 在线查询
 1. settings中QUERY改为True  
 2. 到【后台数据管理】-【从库地址配置】页面添加从库信息  
 3. 到【后台数据管理】-【工作流配置】页面配置审核流程   
@@ -150,7 +150,7 @@
 3. 使用src/script/mysql_slow_query_review.sql创建慢日志收集表到archer数据库
 4. 将src/script/analysis_slow_query.sh部署到各个监控机器，注意修改脚本里面的 `hostname="${mysql_host}:${mysql_port}" `与archer主库配置信息一致，否则将无法筛选到相关记录
 
-### SQLAdvisor优化工具
+### SQL优化工具
 1. 安装SQLAdvisor，[项目地址](https://github.com/Meituan-Dianping/SQLAdvisor)
 2. 修改配置文件SQLADVISOR为程序路径，路径需要完整，如'/opt/SQLAdvisor/sqladvisor/sqladvisor'  
 
