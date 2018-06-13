@@ -9,42 +9,27 @@ from .models import users, master_config, slave_config, workflow, WorkflowAudit,
     DataMaskingColumns, DataMaskingRules, AliyunAccessKey, AliyunRdsConfig
 
 
+# 主库配置管理
+@admin.register(master_config)
 class master_configAdmin(admin.ModelAdmin):
     list_display = ('id', 'cluster_name', 'master_host', 'master_port', 'master_user', 'create_time')
     search_fields = ['id', 'cluster_name', 'master_host', 'master_port', 'master_user', 'master_password',
                      'create_time', 'update_time']
 
 
+# SQL工单管理
+@admin.register(workflow)
 class workflowAdmin(admin.ModelAdmin):
     list_display = ('id', 'workflow_name', 'cluster_name', 'engineer', 'create_time', 'status', 'is_backup')
     search_fields = ['id', 'workflow_name', 'engineer', 'review_man', 'sql_content']
 
 
-# 创建用户表单重新定义，继承自UserCreationForm
-class usersCreationForm(UserCreationForm):
-    def __init__(self, *args, **kwargs):
-        super(usersCreationForm, self).__init__(*args, **kwargs)
-        self.fields['email'].required = True
-        self.fields['display'].required = True
-        self.fields['role'].required = True
-
-
-# 编辑用户表单重新定义，继承自UserChangeForm
-class usersChangeForm(UserChangeForm):
-    def __init__(self, *args, **kwargs):
-        super(usersChangeForm, self).__init__(*args, **kwargs)
-        self.fields['email'].required = True
-        self.fields['display'].required = True
-        self.fields['role'].required = True
-
-
+@admin.register(users)
 class usersAdmin(UserAdmin):
     def __init__(self, *args, **kwargs):
-        super(usersAdmin, self).__init__(*args, **kwargs)
+        super(UserAdmin, self).__init__(*args, **kwargs)
         self.list_display = ('id', 'username', 'display', 'role', 'email', 'is_superuser', 'is_staff', 'is_active')
         self.search_fields = ('id', 'username', 'display', 'role', 'email')
-        self.form = usersChangeForm
-        self.add_form = usersCreationForm
         # 以上的属性都可以在django源码的UserAdmin类中找到，我们做以覆盖
 
     def changelist_view(self, request, extra_context=None):
@@ -62,12 +47,8 @@ class usersAdmin(UserAdmin):
                                           'fields': ('username', 'display', 'role', 'email', 'password1', 'password2'),
                                           }),
                                   )
-        return super(usersAdmin, self).changelist_view(request, extra_context)
+        return super(UserAdmin, self).changelist_view(request, extra_context)
 
-
-admin.site.register(users, usersAdmin)
-admin.site.register(master_config, master_configAdmin)
-admin.site.register(workflow, workflowAdmin)
 
 if settings.QUERY:
     # 查询从库配置

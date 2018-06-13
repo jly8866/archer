@@ -10,9 +10,9 @@
         <li id="process_tab" class="active">
             <a href="#process" role="tab" data-toggle="tab">进程状态</a>
         </li>
-        <li id="space_tab">
-            <a href="#space" role="tab" data-toggle="tab">Top表空间</a>
-        </li>
+{#        <li id="space_tab">#}
+{#            <a href="#space" role="tab" data-toggle="tab">Top表空间</a>#}
+{#        </li>#}
         <div class="form-inline pull-right">
             <div class="form-group">
                 <select id=cluster_name class="form-control selectpicker" name="cluster_name_list"
@@ -310,6 +310,7 @@
                                 var result = data.data;
                                 //给对话框赋值
                                 $("#request_params").val(result);
+                                $("#kill_sql").text(result);
                                 //打开对话框
                                 $("#killComfirm").modal();
                             }
@@ -353,7 +354,7 @@
                 })
             }
             else {
-                alert("无效请求")
+                alert("没有需要被终止的会话")
             }
         }
 

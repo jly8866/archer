@@ -13,7 +13,6 @@ from .models import users, AliyunRdsConfig
 aliyun = Aliyun()
 
 # 获取SQL慢日志统计
-@csrf_exempt
 def slowquery_review(request):
     cluster_name = request.POST.get('cluster_name')
     DBName = request.POST.get('db_name')
@@ -51,7 +50,6 @@ def slowquery_review(request):
 
 
 # 获取SQL慢日志明细
-@csrf_exempt
 def slowquery_review_history(request):
     cluster_name = request.POST.get('cluster_name')
     StartTime = request.POST.get('StartTime')
@@ -95,7 +93,6 @@ def slowquery_review_history(request):
 
 
 # 问题诊断--进程列表
-@csrf_exempt
 def process_status(request):
     cluster_name = request.POST.get('cluster_name')
     command_type = request.POST.get('command_type')
@@ -116,12 +113,10 @@ def process_status(request):
     result = {'status': 0, 'msg': 'ok', 'data': process_list}
 
     # 返回查询结果
-    return HttpResponse(json.dumps(result), content_type='application/json')
+    return result
 
 
 # 问题诊断--通过进程id构建请求id
-@csrf_exempt
-@superuser_required
 def create_kill_session(request):
     cluster_name = request.POST.get('cluster_name')
     ThreadIDs = request.POST.get('ThreadIDs')
@@ -139,12 +134,10 @@ def create_kill_session(request):
     result['data'] = request_list
 
     # 返回查询结果
-    return HttpResponse(json.dumps(result), content_type='application/json')
+    return result
 
 
 # 问题诊断--终止会话
-@csrf_exempt
-@superuser_required
 def kill_session(request):
     cluster_name = request.POST.get('cluster_name')
     request_params = request.POST.get('request_params')
@@ -164,7 +157,7 @@ def kill_session(request):
     result['data'] = kill_result
 
     # 返回查询结果
-    return HttpResponse(json.dumps(result), content_type='application/json')
+    return result
 
 
 # 问题诊断--空间列表

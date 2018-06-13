@@ -74,8 +74,7 @@ class workflow(models.Model):
 
 # 各个线上从库地址
 class slave_config(models.Model):
-    cluster_name = models.OneToOneField(master_config, db_constraint=False, to_field='cluster_name',
-                                        db_column='cluster_name', verbose_name='集群名称', unique=True)
+    cluster_name = models.CharField('集群名称', max_length=50, unique=True)
     slave_host = models.CharField('从库地址', max_length=200)
     slave_port = models.IntegerField('从库端口', default=3306)
     slave_user = models.CharField('登录从库的用户名', max_length=100)

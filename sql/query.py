@@ -83,8 +83,8 @@ def query_priv_check(loginUserOb, cluster_name, dbName, sqlContent, limit_num):
             limit_num = min(int(limit_num), int(user_limit_num))
         pass
     # 查看表结构和执行计划，inception会报错，故单独处理，explain直接跳过不做校验
-    elif re.match(r"^show.*create.*table", sqlContent.lower()):
-        tb_name = re.sub('^show.*create.*table', '', sqlContent, count=1, flags=0).strip()
+    elif re.match(r"^show\s+create\s+table", sqlContent.lower()):
+        tb_name = re.sub('^show\s+create\s+table', '', sqlContent, count=1, flags=0).strip()
         # 先判断是否有整库权限
         db_privileges = QueryPrivileges.objects.filter(user_name=loginUser, cluster_name=cluster_name,
                                                        db_name=dbName, priv_type=1,
@@ -624,18 +624,18 @@ def query(request):
 
     # 过滤注释语句和非查询的语句
     sqlContent = ''.join(
-        map(lambda x: re.compile(r'(^--.*|^/\*.*\*/;[\f\n\r\t\v\s]*$)').sub('', x, count=1),
+        map(lambda x: re.compile(r'(^--\s+.*|^/\*.*\*/;\s*$)').sub('', x, count=1),
             sqlContent.splitlines(1))).strip()
     # 去除空行
     sqlContent = re.sub('[\r\n\f]{2,}', '\n', sqlContent)
 
     sql_list = sqlContent.strip().split('\n')
     for sql in sql_list:
-        if re.match(r"^select|^show.*create.*table|^explain", sql.lower()):
+        if re.match(r"^select|^show|^explain", sql.lower()):
             break
         else:
             finalResult['status'] = 1
-            finalResult['msg'] = '仅支持^select|^show.*create.*table|^explain语法，请联系管理员！'
+            finalResult['msg'] = '仅支持^select|^show|^explain语法，请联系管理员！'
             return HttpResponse(json.dumps(finalResult), content_type='application/json')
 
     # 取出该集群的连接方式,查询只读账号,按照分号截取第一条有效sql执行
@@ -655,8 +655,8 @@ def query(request):
 
     # 对查询sql增加limit限制
     if re.match(r"^select", sqlContent.lower()):
-        if re.search(r"limit[\f\n\r\t\v\s]+(\d+)$", sqlContent.lower()) is None:
-            if re.search(r"limit[\f\n\r\t\v\s]+\d+[\f\n\r\t\v\s]*,[\f\n\r\t\v\s]*(\d+)$", sqlContent.lower()) is None:
+        if re.search(r"limit\s+(\d+)$", sqlContent.lower()) is None:
+            if re.search(r"limit\s+\d+\s*,\s*(\d+)$", sqlContent.lower()) is None:
                 sqlContent = sqlContent + ' limit ' + str(limit_num)
 
     sqlContent = sqlContent + ';'
@@ -826,8 +826,7 @@ def slowquery_review(request):
         limit = offset + limit
 
         # 时间处理
-        if StartTime == EndTime:
-            EndTime = datetime.datetime.strptime(EndTime, '%Y-%m-%d') + datetime.timedelta(days=1)
+        EndTime = datetime.datetime.strptime(EndTime, '%Y-%m-%d') + datetime.timedelta(days=1)
         # DBName非必传
         if DBName:
             # 获取慢查数据
@@ -929,8 +928,7 @@ def slowquery_review_history(request):
         offset = int(request.POST.get('offset'))
 
         # 时间处理
-        if StartTime == EndTime:
-            EndTime = datetime.datetime.strptime(EndTime, '%Y-%m-%d') + datetime.timedelta(days=1)
+        EndTime = datetime.datetime.strptime(EndTime, '%Y-%m-%d') + datetime.timedelta(days=1)
         limit = offset + limit
         # SQLId、DBName非必传
         if SQLId:
@@ -941,7 +939,7 @@ def slowquery_review_history(request):
                 ts_min__range=(StartTime, EndTime)
             ).annotate(ExecutionStartTime=F('ts_min'),  # 执行开始时间
                        DBName=F('db_max'),  # 数据库名
-                       HostAddress=Concat('client_max', V('@'), 'user_max'),  # 用户名
+                       HostAddress=Concat(V('\''), 'user_max', V('\''), V('@'), V('\''), 'client_max', V('\'')),  # 用户名
                        SQLText=F('sample'),  # SQL语句
                        QueryTimes=F('query_time_sum'),  # 执行时长(秒)
                        LockTimes=F('lock_time_sum'),  # 锁定时长(秒)
@@ -966,7 +964,7 @@ def slowquery_review_history(request):
                     ts_min__range=(StartTime, EndTime)
                 ).annotate(ExecutionStartTime=F('ts_min'),  # 执行开始时间
                            DBName=F('db_max'),  # 数据库名
-                           HostAddress=Concat('client_max', V('@'), 'user_max'),  # 用户名
+                           HostAddress=Concat(V('\''), 'user_max', V('\''), V('@'), V('\''), 'client_max', V('\'')), # 用户名
                            SQLText=F('sample'),  # SQL语句
                            QueryTimes=F('query_time_sum'),  # 执行时长(秒)
                            LockTimes=F('lock_time_sum'),  # 锁定时长(秒)
