@@ -4,6 +4,7 @@
 ****
 ## 目录
 * [主要功能](#主要功能)
+* [设计规范](#设计规范)
 * [在线体验](#系统体验)
 * [安装](#采取docker部署)
     * [docker部署](#采取docker部署)
@@ -239,9 +240,9 @@ inception无法连接备份库
 - 检查配置文件里面inception相关配置  
 - 检查inception审核用户和备份用户权限，权限参考    
     ```
-    — inception备份用户（主库配置用户，如果要使用会话管理需要赋予SUPER权限）
+    — inception备份用户
     GRANT SELECT, INSERT, CREATE ON *.* TO 'inception_bak'
-    — inception审核用户（各个业务实例，如果需要使用OSC，请额外配置权限）
+    — inception审核用户（主库配置用户，如果要使用会话管理需要赋予SUPER权限，如果需要使用OSC，请额外配置权限）
     GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER,REPLICATION CLIENT,REPLICATION SLAVE ON *.* TO 'inception'
     — archer在线查询用户（从库配置用户）
     GRANT SELECT ON *.* TO 'archer_read'
@@ -253,7 +254,7 @@ inception无法连接备份库
 #### 查询权限管理
 - 查询权限管理的审批流程和SQL上线是隔离的，需要到后台数据管理进行配置
 - 审核人看不到待审核工单  
-代办列表被隐藏至右上角的消息图标中，当有待审核信息是会显示图标，可以进入查看待办数据
+代办列表被隐藏至右上角的消息图标中，当有待审核信息时会显示图标，可以进入查看待办数据
 
 #### 定时任务  
 - 未执行  
