@@ -69,6 +69,10 @@
         </tbody>
     </table>
     <br>
+    <!-- 自定义操作按钮-->
+    <div id="detail-toolbar" class="btn-group right">
+        <button id="expandAllRows" class="btn btn-default navbar-btn" type="button">展开全部</button>
+    </div>
     <table id="tb-detail" data-toggle="table" class="table table-condensed"></table>
 
     {% if workflowDetail.audit_remark  and workflowDetail.status == '人工终止流程' %}
@@ -251,6 +255,8 @@
     <script src="{% static 'daterangepicker/js/moment.min.js' %}"></script>
     <script src="{% static 'datetimepicker/js/bootstrap-datetimepicker.js' %}"></script>
     <script src="{% static 'datetimepicker/js/bootstrap-datetimepicker.zh-CN.js' %}"></script>
+    <script src="{% static 'bootstrap-table/js/bootstrap-table-export.min.js' %}"></script>
+    <script src="{% static 'bootstrap-table/js/tableExport.min.js' %}"></script>
     <!--初始化时间控件 -->
     <script>
         var date = new Date();
@@ -303,6 +309,18 @@
             sessionStorage.setItem('editIsbackup', editIsbackup);
             sessionStorage.setItem('editReviewman', editReviewman);
             sessionStorage.setItem('editSubReviewman', editSubReviewman);
+        });
+
+        // 表格展开折叠全部行
+        $("#expandAllRows").click(function () {
+            if ($(this).text() === '展开全部') {
+                $('#tb-detail').bootstrapTable('expandAllRows');
+                $(this).text('折叠全部')
+            }
+            else if ($(this).text() === '折叠全部') {
+                $('#tb-detail').bootstrapTable('collapseAllRows');
+                $(this).text('展开全部')
+            }
         });
 
         // 执行确认
@@ -379,13 +397,16 @@
                 pageList: [500, 1000, 10000],        //可供选择的每页的行数（*）
                 search: false,                       //是否显示表格搜索
                 strictSearch: false,                //是否全匹配搜索
-                showColumns: false,                  //是否显示所有的列（选择显示的列）
+                showColumns: true,                  //是否显示所有的列（选择显示的列）
                 showRefresh: false,                  //是否显示刷新按钮
                 minimumCountColumns: 2,             //最少允许的列数
                 clickToSelect: false,                //是否启用点击选中行
                 uniqueId: "id",                     //每一行的唯一标识，一般为主键列
-                showToggle: false,                   //是否显示详细视图和列表视图的切换按钮
+                showToggle: true,                   //是否显示详细视图和列表视图的切换按钮
                 cardView: false,                    //是否显示详细视图
+                toolbar: "#detail-toolbar",         //指明自定义的toolbar
+                showExport: true,
+                exportDataType: "all",
                 detailView: true,                  //是否显示父子表
                 //格式化详情
                 detailFormatter: function (index, row) {
