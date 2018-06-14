@@ -24,7 +24,7 @@ hostname="${mysql_host}:${mysql_port}" # 用于archer做筛选
 if [ -s last_analysis_time_$hostname ]; then
     last_analysis_time=`cat last_analysis_time_$hostname`
 else
-    last_analysis_time='0000-00-00-00 00:00:00'
+    last_analysis_time='1000-01-01 00:00:00'
 fi
 
 #collect mysql slowquery log into monitor database
