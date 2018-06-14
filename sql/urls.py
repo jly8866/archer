@@ -59,7 +59,10 @@ urlpatterns = [
     url(r'^explain/$', query.explain, name='explain'),
     url(r'^slowquery_review/$', query.slowquery_review, name='slowquery_review'),
     url(r'^slowquery_review_history/$', query.slowquery_review_history, name='slowquery_review_history'),
-
+    url(r'^process_status/$', views_ajax.process_status, name='process_status'),
+    url(r'^create_kill_session/$', views_ajax.create_kill_session,
+        name='create_kill_session'),
+    url(r'^kill_session/$', views_ajax.kill_session, name='kill_session'),
     url(r'^del_sqlcronjob/$', jobs.del_sqlcronjob, name='del_sqlcronjob'),
 
 ]
@@ -68,10 +71,6 @@ if settings.ALIYUN_RDS_MANAGE:
     from . import aliyun_function
 
     aliyun_function_url = [
-        url(r'^process_status/$', aliyun_function.process_status, name='process_status'),
         url(r'^sapce_status/$', aliyun_function.sapce_status, name='sapce_status'),
-        url(r'^create_kill_session/$', aliyun_function.create_kill_session,
-            name='create_kill_session'),
-        url(r'^kill_session/$', aliyun_function.kill_session, name='kill_session'),
     ]
     urlpatterns.extend(aliyun_function_url)

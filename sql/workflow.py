@@ -174,44 +174,42 @@ class Workflow(object):
             raise Exception(result['msg'])
         return result
 
-    # 获取审核列表
+    # 获取代办列表
     def auditlist(self, loginUserOb, workflow_type, offset=0, limit=14, search=''):
         result = {'status': 0, 'msg': '', 'data': []}
 
-        # 管理员获取所有数据，其他人获取拥有审核权限的数据
+        # 只返回当前待自己审核的数据
         if workflow_type == 0:
             auditlist = WorkflowAudit.objects.filter(
-                workflow_title__contains=search
-            ).filter(
-                Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)
+                workflow_title__contains=search,
+                current_status=WorkflowDict.workflow_status['audit_wait'],
+                current_audit_user=loginUserOb.username
             ).order_by('-audit_id')[offset:limit].values(
                 'audit_id', 'workflow_type', 'workflow_title', 'create_user',
                 'create_time', 'current_status', 'audit_users',
-                'current_audit_user'
-            )
+                'current_audit_user')
             auditlistCount = WorkflowAudit.objects.filter(
-                workflow_title__contains=search
-            ).filter(
-                Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)
+                workflow_title__contains=search,
+                current_status=WorkflowDict.workflow_status['audit_wait'],
+                current_audit_user=loginUserOb.username
             ).count()
         else:
             auditlist = WorkflowAudit.objects.filter(
                 workflow_title__contains=search,
-                workflow_type=workflow_type
-            ).filter(
-                Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)
+                workflow_type=workflow_type,
+                current_status=WorkflowDict.workflow_status['audit_wait'],
+                current_audit_user=loginUserOb.username
             ).order_by('-audit_id')[offset:limit].values(
                 'audit_id', 'workflow_type',
                 'workflow_title', 'create_user',
                 'create_time', 'current_status',
                 'audit_users',
-                'current_audit_user',
-            )
+                'current_audit_user')
             auditlistCount = WorkflowAudit.objects.filter(
                 workflow_title__contains=search,
                 workflow_type=workflow_type,
-            ).filter(
-                Q(audit_users__contains=loginUserOb.username) | Q(create_user=loginUserOb.username)
+                current_status=WorkflowDict.workflow_status['audit_wait'],
+                current_audit_user=loginUserOb.username
             ).count()
 
         result['data'] = {'auditlist': auditlist, 'auditlistCount': auditlistCount}

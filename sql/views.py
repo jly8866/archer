@@ -77,7 +77,7 @@ def submitSql(request):
 
     # 获取所有审核人，当前登录用户不可以审核
     loginUser = request.session.get('login_username', False)
-    reviewMen = users.objects.filter(role__in=['审核人', 'DBA']).exclude(username=loginUser)
+    reviewMen = users.objects.filter(role__in=['审核人', 'DBA'])
 
     context = {'currentMenu': 'allworkflow', 'dictAllClusterDb': dictAllClusterDb, 'reviewMen': reviewMen}
     return render(request, 'submitSql.html', context)
@@ -556,8 +556,8 @@ def diagnosis_process(request):
     loginUser = request.session.get('login_username', False)
     loginUserOb = users.objects.get(username=loginUser)
 
-    # 获取所有集群名称
-    masters = AliyunRdsConfig.objects.all().order_by('cluster_name')
+    # 获取所有实例名称
+    masters = master_config.objects.all().order_by('cluster_name')
     cluster_name_list = [master.cluster_name for master in masters]
 
     context = {'currentMenu': 'diagnosis', 'tab': 'process', 'cluster_name_list': cluster_name_list,

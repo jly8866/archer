@@ -85,7 +85,7 @@ WSGI_APPLICATION = 'archer.wsgi.application'
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'zh-hans'
 
 TIME_ZONE = 'Asia/Shanghai'
 
@@ -254,15 +254,15 @@ MAIL_REVIEW_FROM_PASSWORD = ''  # 发件人邮箱密码，如果为空则不需�
 CRITICAL_DDL_ON_OFF = 'off'
 
 # 是否开启SQL查询功能，关闭会隐藏菜单和相关功能
-QUERY = False
+QUERY = True
 
 # 当inception语法树打印失败时在线查询的结果控制，建议修改inception变量inception_enable_select_star=OFF，否则select * 会报错
 # True是开启校验，失败不允许继续执行并返回错，
 # False是关闭校验，继续执行，关闭校验会导致解析失败的查询表权限验证和脱敏功能失效
-CHECK_QUERY_ON_OFF = False
+CHECK_QUERY_ON_OFF = True
 
 # 是否开启动态脱敏查询，采取正则遍历处理结果集的方式，会影响部分查询效率
-DATA_MASKING_ON_OFF = False
+DATA_MASKING_ON_OFF = True
 
 # 管理员在线查询的结果集限制
 ADMIN_QUERY_LIMIT = 5000
