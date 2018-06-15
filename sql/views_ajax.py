@@ -32,8 +32,10 @@ from sql.sendmail import MailSender
 import logging
 from .workflow import Workflow
 from .extend_json_encoder import ExtendJSONEncoder
-from .aliyun_function import process_status as aliyun_process_status, \
-    create_kill_session as aliyun_create_kill_session, kill_session as aliyun_kill_session
+
+if settings.ALIYUN_RDS_MANAGE:
+    from .aliyun_function import process_status as aliyun_process_status, \
+        create_kill_session as aliyun_create_kill_session, kill_session as aliyun_kill_session
 
 logger = logging.getLogger('default')
 mailSender = MailSender()
@@ -486,7 +488,9 @@ def workflowlist(request):
 
     result = {"total": auditlistCount, "rows": rows}
     # 返回查询结果
-    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True), content_type='application/json')
+    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True),
+                        content_type='application/json')
+
 
 # 问题诊断--进程列表
 @csrf_exempt
