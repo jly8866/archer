@@ -580,7 +580,7 @@ def workflows(request):
     # 获取用户信息
     loginUser = request.session.get('login_username', False)
     loginUserOb = users.objects.get(username=loginUser)
-    context = {'currentMenu': 'workflow', "loginUserOb": loginUserOb}
+    context = {'currentMenu': 'queryapply', "loginUserOb": loginUserOb}
     return render(request, "workflow.html", context)
 
 

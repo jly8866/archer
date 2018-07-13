@@ -93,6 +93,7 @@
             </tr>
             </tbody>
         </table>
+        <br>
     {% endif %}
     {% if workflowDetail.status == '定时执行' %}
         <br>
@@ -112,8 +113,9 @@
             </tr>
             </tbody>
         </table>
+        <br>
     {% endif %}
-    <br>
+
     {% if workflowDetail.status == '等待审核人审核' %}
         {% if loginUser in listAllReviewMen %}
             <textarea id="remark" name="remark" class="form-control" data-name="审核备注"
@@ -399,7 +401,7 @@
                 strictSearch: false,                //是否全匹配搜索
                 showColumns: true,                  //是否显示所有的列（选择显示的列）
                 showRefresh: false,                  //是否显示刷新按钮
-                minimumCountColumns: 2,             //最少允许的列数
+                minimumCountColumns: 1,             //最少允许的列数
                 clickToSelect: false,                //是否启用点击选中行
                 uniqueId: "id",                     //每一行的唯一标识，一般为主键列
                 showToggle: true,                   //是否显示详细视图和列表视图的切换按钮
@@ -440,8 +442,11 @@
                         else {
                             return value
                         }
-                    },
-                    sortable: true
+                    }
+                }, {
+                    title: '完整SQL内容',
+                    field: 'SQL',
+                    visible: false
                 }, {
                     title: '审核状态',
                     field: 'errlevel',

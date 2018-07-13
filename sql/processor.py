@@ -19,7 +19,7 @@ leftMenuBtnsCommon = (
 leftMenuBtnsSuper = (
     {'key': 'diagnosis', 'name': '主库会话管理', 'url': '/diagnosis_process/', 'class': 'glyphicon  glyphicon-scissors',
      'display': True},
-    {'key': 'admin', 'name': '后台数据管理', 'url': '/admin/', 'class': 'glyphicon glyphicon-list', 'display': True},
+    {'key': 'admin', 'name': '后台数据管理', 'url': '/admin/sql/', 'class': 'glyphicon glyphicon-list', 'display': True},
 )
 
 leftMenuBtnsDoc = (

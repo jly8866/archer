@@ -53,16 +53,16 @@ class workflow(models.Model):
     finish_time = models.DateTimeField('结束时间', null=True, blank=True)
     status = models.CharField(max_length=50, choices=(
         ('已正常结束', '已正常结束'), ('人工终止流程', '人工终止流程'), ('自动审核中', '自动审核中'), ('等待审核人审核', '等待审核人审核'), ('审核通过', '审核通过'),
-        ('执行中', '执行中'), ('自动审核不通过', '自动审核不通过'), ('执行有异常', '执行有异常')))
+        ('定时执行', '定时执行'), ('执行中', '执行中'), ('自动审核不通过', '自动审核不通过'), ('执行有异常', '执行有异常')))
     # is_backup = models.IntegerField('是否备份，0为否，1为是', choices=((0,0),(1,1)))
     is_backup = models.CharField('是否备份', choices=(('否', '否'), ('是', '是')), max_length=20)
     review_content = models.TextField('自动审核内容的JSON格式')
     cluster_name = models.CharField('集群名称', max_length=50)
     reviewok_time = models.DateTimeField('人工审核通过的时间', null=True, blank=True)
     sql_content = models.TextField('具体sql内容')
-    execute_result = models.TextField('执行结果的JSON格式')
+    execute_result = models.TextField('执行结果的JSON格式', blank=True)
     is_manual = models.IntegerField('是否手工执行', choices=((0, '否'), (1, '是')), default=0)
-    audit_remark = models.TextField('审核备注', null=True)
+    audit_remark = models.TextField('审核备注', null=True, blank=True)
 
     def __str__(self):
         return self.workflow_name
@@ -223,7 +223,7 @@ class QueryLog(models.Model):
 class DataMaskingColumns(models.Model):
     column_id = models.AutoField('字段id', primary_key=True)
     rule_type = models.IntegerField('规则类型',
-                                    choices=((1, '手机号'), (2, '证件号码'), (3, '银行卡'), (4, '邮箱'), (5, '金额')))
+                                    choices=((1, '手机号'), (2, '证件号码'), (3, '银行卡'), (4, '邮箱'), (5, '金额'), (6, '其他')))
     active = models.IntegerField('激活状态', choices=((0, '未激活'), (1, '激活')))
     cluster_name = models.CharField('集群名称', max_length=50)
     table_schema = models.CharField('字段所在库名', max_length=64)
@@ -242,7 +242,7 @@ class DataMaskingColumns(models.Model):
 # 脱敏规则配置
 class DataMaskingRules(models.Model):
     rule_type = models.IntegerField('规则类型',
-                                    choices=((1, '手机号'), (2, '证件号码'), (3, '银行卡'), (4, '邮箱'), (5, '金额')), unique=True)
+                                    choices=((1, '手机号'), (2, '证件号码'), (3, '银行卡'), (4, '邮箱'), (5, '金额'), (6, '其他')), unique=True)
     rule_regex = models.CharField('规则脱敏所用的正则表达式，表达式必须分组，隐藏的组会使用****代替', max_length=255)
     hide_group = models.IntegerField('需要隐藏的组')
     rule_desc = models.CharField('规则描述', max_length=100, default='', blank=True)

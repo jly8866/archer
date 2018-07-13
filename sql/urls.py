@@ -60,9 +60,9 @@ urlpatterns = [
     url(r'^slowquery_review/$', query.slowquery_review, name='slowquery_review'),
     url(r'^slowquery_review_history/$', query.slowquery_review_history, name='slowquery_review_history'),
     url(r'^process_status/$', views_ajax.process_status, name='process_status'),
-    url(r'^create_kill_session/$', views_ajax.create_kill_session,
-        name='create_kill_session'),
+    url(r'^create_kill_session/$', views_ajax.create_kill_session,name='create_kill_session'),
     url(r'^kill_session/$', views_ajax.kill_session, name='kill_session'),
+    url(r'^sapce_status/$', views_ajax.tablesapce, name='tablesapce'),
     url(r'^del_sqlcronjob/$', jobs.del_sqlcronjob, name='del_sqlcronjob'),
 
 ]
