@@ -22,7 +22,7 @@ class master_configAdmin(admin.ModelAdmin):
 class workflowAdmin(admin.ModelAdmin):
     list_display = ('id', 'workflow_name', 'cluster_name', 'engineer', 'create_time', 'status', 'is_backup')
     search_fields = ['id', 'workflow_name', 'engineer', 'review_man', 'sql_content']
-
+    exclude = ('is_manual',)
 
 @admin.register(users)
 class usersAdmin(UserAdmin):
@@ -55,7 +55,7 @@ if settings.QUERY:
     @admin.register(slave_config)
     class WorkflowAuditAdmin(admin.ModelAdmin):
         list_display = (
-            'cluster_name', 'slave_host', 'slave_port', 'slave_user', 'create_time', 'update_time')
+            'id', 'cluster_name', 'slave_host', 'slave_port', 'slave_user', 'create_time', 'update_time')
         search_fields = ['id', 'cluster_name', 'slave_host', 'slave_port', 'slave_user', 'slave_password', ]
 
 

@@ -27,7 +27,7 @@ from .dao import Dao
 from .const import Const, WorkflowDict
 from .inception import InceptionDao
 from .aes_decryptor import Prpcrypt
-from .models import users, master_config, workflow
+from .models import users, master_config, workflow, AliyunRdsConfig
 from sql.sendmail import MailSender
 import logging
 from .workflow import Workflow
@@ -35,7 +35,8 @@ from .extend_json_encoder import ExtendJSONEncoder
 
 if settings.ALIYUN_RDS_MANAGE:
     from .aliyun_function import process_status as aliyun_process_status, \
-        create_kill_session as aliyun_create_kill_session, kill_session as aliyun_kill_session
+        create_kill_session as aliyun_create_kill_session, kill_session as aliyun_kill_session, \
+        sapce_status as aliyun_sapce_status
 
 logger = logging.getLogger('default')
 mailSender = MailSender()
@@ -93,8 +94,6 @@ def loginAuthenticate(username, password):
                     # 上一次登录失败时间早于5分钟前，则重新计数。以达到超过5分钟自动解锁的目的。
                     login_failure_counter[username]["cnt"] = 1
                 login_failure_counter[username]["last_failure_time"] = datetime.datetime.now()
-            log_mail_record(
-                'user:{},login failed, fail count:{}'.format(username, login_failure_counter[username]["cnt"]))
             result = {'status': 1, 'msg': '用户名或密码错误，请重新输入！', 'data': ''}
     return result
 
@@ -123,11 +122,6 @@ def authenticateEntry(request):
                 replace_info.password = make_password(password)
                 replace_info.is_ldapuser = 1
                 replace_info.save()
-
-        # 调用了django内置登录方法，防止管理后台二次登录
-        user = authenticate(username=username, password=password)
-        if user:
-            login(request, user)
 
         # session保存用户信息
         request.session['login_username'] = username
@@ -500,8 +494,11 @@ def process_status(request):
 
     base_sql = "select id, user, host, db, command, time, state, ifnull(info,'') as info from information_schema.processlist"
     # 判断是RDS还是其他实例
-    if settings.ALIYUN_RDS_MANAGE:
-        result = aliyun_process_status(request)
+    if len(AliyunRdsConfig.objects.filter(cluster_name=cluster_name)) > 0:
+        if settings.ALIYUN_RDS_MANAGE:
+            result = aliyun_process_status(request)
+        else:
+            raise Exception('未开启rds管理，无法查看rds数据！')
     else:
         master_info = master_config.objects.get(cluster_name=cluster_name)
         if command_type == 'All':
@@ -534,8 +531,11 @@ def create_kill_session(request):
 
     result = {'status': 0, 'msg': 'ok', 'data': []}
     # 判断是RDS还是其他实例
-    if settings.ALIYUN_RDS_MANAGE:
-        result = aliyun_create_kill_session(request)
+    if len(AliyunRdsConfig.objects.filter(cluster_name=cluster_name)) > 0:
+        if settings.ALIYUN_RDS_MANAGE:
+            result = aliyun_create_kill_session(request)
+        else:
+            raise Exception('未开启rds管理，无法查看rds数据！')
     else:
         master_info = master_config.objects.get(cluster_name=cluster_name)
         ThreadIDs = ThreadIDs.replace('[', '').replace(']', '')
@@ -559,8 +559,11 @@ def kill_session(request):
 
     result = {'status': 0, 'msg': 'ok', 'data': []}
     # 判断是RDS还是其他实例
-    if settings.ALIYUN_RDS_MANAGE:
-        result = aliyun_kill_session(request)
+    if len(AliyunRdsConfig.objects.filter(cluster_name=cluster_name)) > 0:
+        if settings.ALIYUN_RDS_MANAGE:
+            result = aliyun_kill_session(request)
+        else:
+            raise Exception('未开启rds管理，无法查看rds数据！')
     else:
         master_info = master_config.objects.get(cluster_name=cluster_name)
         kill_sql = request_params
@@ -569,3 +572,49 @@ def kill_session(request):
 
     # 返回查询结果
     return HttpResponse(json.dumps(result), content_type='application/json')
+
+
+# 问题诊断--表空间信息
+@csrf_exempt
+@role_required(('DBA',))
+def tablesapce(request):
+    cluster_name = request.POST.get('cluster_name')
+
+    # 判断是RDS还是其他实例
+    if len(AliyunRdsConfig.objects.filter(cluster_name=cluster_name)) > 0:
+        if settings.ALIYUN_RDS_MANAGE:
+            result = aliyun_sapce_status(request)
+        else:
+            raise Exception('未开启rds管理，无法查看rds数据！')
+    else:
+        master_info = master_config.objects.get(cluster_name=cluster_name)
+        sql = '''
+        SELECT
+          table_schema,
+          table_name,
+          engine,
+          TRUNCATE((data_length+index_length+data_free)/1024/1024,2) AS total_size,
+          table_rows,
+          TRUNCATE(data_length/1024/1024,2) AS data_size,
+          TRUNCATE(index_length/1024/1024,2) AS index_size,
+          TRUNCATE(data_free/1024/1024,2) AS data_free,
+          TRUNCATE(data_free/(data_length+index_length+data_free)*100,2) AS pct_free
+        FROM information_schema.tables 
+        WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql', 'test', 'sys')
+          ORDER BY total_size DESC 
+        LIMIT 14;'''.format(cluster_name)
+        table_space = dao.mysql_query(master_info.master_host, master_info.master_port, master_info.master_user,
+                                      prpCryptor.decrypt(master_info.master_password), 'information_schema', sql)
+        column_list = table_space['column_list']
+        rows = []
+        for row in table_space['rows']:
+            row_info = {}
+            for row_index, row_item in enumerate(row):
+                row_info[column_list[row_index]] = row_item
+            rows.append(row_info)
+
+        result = {'status': 0, 'msg': 'ok', 'data': rows}
+
+    # 返回查询结果
+    return HttpResponse(json.dumps(result, cls=ExtendJSONEncoder, bigint_as_string=True),
+                        content_type='application/json')

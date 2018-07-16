@@ -143,7 +143,7 @@
 
 ### 慢日志管理
 1. settings中SLOWQUERY改为True  
-2. 安装percona-toolkit（版本>3.0），以centos为例   
+2. 安装percona-toolkit（版本=3.0.6），以centos为例   
     ```
     yum -y install http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm 
     yum -y install percona-toolkit.x86_64 
@@ -264,18 +264,15 @@ inception无法连接备份库
 | 银行卡 | (.*)(.{4})$ | 2 | 隐藏后四位|
 | 邮箱 | (.*)@(.*) | 2 | 去除后缀|
 
-#### 查询权限管理
-- 查询权限管理的审批流程和SQL上线是隔离的，需要到后台数据管理进行配置
-- 审核人看不到待审核工单  
-代办列表被隐藏至右上角的消息图标中，当有待审核信息时会显示图标，可以进入查看待办数据
+#### 审核人看不到查询权限申请待审核工单  
+查询权限申请待办列表被隐藏至右上角的消息图标中，当有待审核信息时会显示图标，可以进入查看待办数据  
 
-#### 慢日志管理
-- 检查脚本内的配置，hostname和archer主库配置内容保持一致，用于archer做筛选
-- 检查mysql_slow_query_review_history表收集的日志信息hostname_max是否和hostname一致
+#### 慢日志不显示
+- 检查脚本内的配置，hostname和archer主库配置内容保持一致，用于archer做筛选  
+- 检查mysql_slow_query_review_history表收集的日志信息hostname_max是否和hostname一致  
 
-#### 定时任务  
-- 未执行  
-检查django-apscheduler相关表是否有创建，可使用`python3 manage.py migrate`创建  
+#### 定时任务未执行   
+- 检查django-apscheduler相关表是否有创建，可使用`python3 manage.py migrate`创建  
 
 ## 联系方式
 QQ群524233225
