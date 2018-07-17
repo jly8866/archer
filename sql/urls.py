@@ -64,13 +64,5 @@ urlpatterns = [
     url(r'^kill_session/$', views_ajax.kill_session, name='kill_session'),
     url(r'^sapce_status/$', views_ajax.tablesapce, name='tablesapce'),
     url(r'^del_sqlcronjob/$', jobs.del_sqlcronjob, name='del_sqlcronjob'),
-
 ]
 
-if settings.ALIYUN_RDS_MANAGE:
-    from . import aliyun_function
-
-    aliyun_function_url = [
-        url(r'^sapce_status/$', aliyun_function.sapce_status, name='sapce_status'),
-    ]
-    urlpatterns.extend(aliyun_function_url)
