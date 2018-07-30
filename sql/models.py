@@ -407,6 +407,7 @@ class SlowQueryHistory(models.Model):
 
     class Meta:
         managed = False
+        db_table = 'mysql_slow_query_review_history'
         unique_together = ('checksum', 'ts_min', 'ts_max')
         index_together = ('hostname_max', 'ts_min')
         verbose_name = u'慢日志明细'
