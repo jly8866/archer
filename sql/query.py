@@ -945,7 +945,7 @@ def slowquery_review_history(request):
             # 获取慢查明细数据
             slowsql_record_obj = SlowQueryHistory.objects.filter(
                 hostname_max=(cluster_info.master_host + ':' + str(cluster_info.master_port)),
-                checksum=int(SQLId),
+                checksum=SQLId,
                 ts_min__range=(StartTime, EndTime)
             ).annotate(ExecutionStartTime=F('ts_min'),  # 执行开始时间
                        DBName=F('db_max'),  # 数据库名
@@ -962,7 +962,7 @@ def slowquery_review_history(request):
 
             slowsql_obj_count = SlowQueryHistory.objects.filter(
                 hostname_max=(cluster_info.master_host + ':' + str(cluster_info.master_port)),
-                checksum=int(SQLId),
+                checksum=SQLId,
                 ts_min__range=(StartTime, EndTime)
             ).count()
         else:
