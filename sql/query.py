@@ -24,7 +24,7 @@ from .dao import Dao
 from .const import WorkflowDict
 from .inception import InceptionDao
 from .models import users, master_config, slave_config, QueryPrivilegesApply, QueryPrivileges, QueryLog, SlowQuery, \
-    SlowQueryHistory
+    SlowQueryHistory, AliyunRdsConfig
 from .data_masking import Masking
 from .workflow import Workflow
 from .permission import role_required, superuser_required
@@ -818,9 +818,12 @@ def slowquery_review(request):
 
     # 判断是RDS还是其他实例
     cluster_info = master_config.objects.get(cluster_name=cluster_name)
-    if settings.ALIYUN_RDS_MANAGE:
-        # 调用阿里云慢日志接口
-        result = aliyun_rds_slowquery_review(request)
+    if len(AliyunRdsConfig.objects.filter(cluster_name=cluster_name)) > 0:
+        if settings.ALIYUN_RDS_MANAGE:
+            # 调用阿里云慢日志接口
+            result = aliyun_rds_slowquery_review(request)
+        else:
+            raise Exception('未开启rds管理，无法查看rds数据！')
     else:
         StartTime = request.POST.get('StartTime')
         EndTime = request.POST.get('EndTime')
@@ -920,9 +923,12 @@ def slowquery_review_history(request):
 
     # 判断是RDS还是其他实例
     cluster_info = master_config.objects.get(cluster_name=cluster_name)
-    if settings.ALIYUN_RDS_MANAGE:
-        # 调用阿里云慢日志接口
-        result = aliyun_rds_slowquery_review_history(request)
+    if len(AliyunRdsConfig.objects.filter(cluster_name=cluster_name)) > 0:
+        if settings.ALIYUN_RDS_MANAGE:
+            # 调用阿里云慢日志接口
+            result = aliyun_rds_slowquery_review_history(request)
+        else:
+            raise Exception('未开启rds管理，无法查看rds数据！')
     else:
         StartTime = request.POST.get('StartTime')
         EndTime = request.POST.get('EndTime')
