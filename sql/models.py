@@ -290,7 +290,7 @@ class AliyunRdsConfig(models.Model):
 
 # SlowQuery
 class SlowQuery(models.Model):
-    checksum = models.BigIntegerField(primary_key=True)
+    checksum = models.CharField(max_length=32, primary_key=True)
     fingerprint = models.TextField()
     sample = models.TextField()
     first_seen = models.DateTimeField(blank=True, null=True)
@@ -408,6 +408,7 @@ class SlowQueryHistory(models.Model):
     class Meta:
         managed = False
         db_table = 'mysql_slow_query_review_history'
-        unique_together = ('hostname_max', 'ts_min')
+        unique_together = ('checksum', 'ts_min', 'ts_max')
+        index_together = ('hostname_max', 'ts_min')
         verbose_name = u'慢日志明细'
         verbose_name_plural = u'慢日志明细'
