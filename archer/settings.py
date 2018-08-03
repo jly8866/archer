@@ -229,7 +229,7 @@ LOGGING = {
         #     'level': 'DEBUG',
         #     'propagate': False,
         # },
-        'django.request': {  # 打印SQL语句到console，方便开发
+        'django.request': {  # 打印错误堆栈信息到console，方便开发
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
@@ -244,7 +244,7 @@ LOGGING = {
 
 # 是否开启邮件提醒功能：发起SQL上线后会发送邮件提醒审核人审核，执行完毕会发送给DBA. on是开，off是关，配置为其他值均会被archer认为不开启邮件功能
 MAIL_ON_OFF = 'off'
-
+MAIL_SSL = False # 是否使用SSL
 MAIL_REVIEW_SMTP_SERVER = 'mail.xxx.com'
 MAIL_REVIEW_SMTP_PORT = 25
 MAIL_REVIEW_FROM_ADDR = 'archer@xxx.com'  # 发件人，也是登录SMTP server需要提供的用户名
