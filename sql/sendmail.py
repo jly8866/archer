@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-
+import traceback
 from multiprocessing import Process
 import email
 from email import encoders
@@ -10,6 +9,9 @@ from email.utils import parseaddr, formataddr
 import smtplib
 
 from django.conf import settings
+import logging
+
+logger = logging.getLogger('default')
 
 
 class MailSender(object):
@@ -87,5 +89,8 @@ class MailSender(object):
 
     # 调用方应该调用此方法，采用子进程方式异步阻塞地发送邮件，避免邮件服务挂掉影响archer主服务
     def sendEmail(self, strTitle, strContent, listToAddr, **kwargs):
-        p = Process(target=self._send, args=(strTitle, strContent, listToAddr), kwargs=kwargs)
-        p.start()
+        try:
+            p = Process(target=self._send, args=(strTitle, strContent, listToAddr), kwargs=kwargs)
+            p.start()
+        except Exception:
+            logger.error(traceback.format_exc())
