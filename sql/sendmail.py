@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-
+import traceback
 from multiprocessing import Process
 import email
 from email import encoders
@@ -10,6 +9,9 @@ from email.utils import parseaddr, formataddr
 import smtplib
 
 from django.conf import settings
+import logging
+
+logger = logging.getLogger('default')
 
 
 class MailSender(object):
@@ -20,6 +22,7 @@ class MailSender(object):
             self.MAIL_REVIEW_SMTP_PORT = int(getattr(settings, 'MAIL_REVIEW_SMTP_PORT'))
             self.MAIL_REVIEW_FROM_ADDR = getattr(settings, 'MAIL_REVIEW_FROM_ADDR')
             self.MAIL_REVIEW_FROM_PASSWORD = getattr(settings, 'MAIL_REVIEW_FROM_PASSWORD')
+            self.SSL = getattr(settings, 'MAIL_SSL')
 
         except AttributeError as a:
             print("Error: %s" % a)
@@ -72,7 +75,10 @@ class MailSender(object):
         main_msg['Subject'] = Header(strTitle, "utf-8").encode()
         main_msg['Date'] = email.utils.formatdate()
 
-        server = smtplib.SMTP(self.MAIL_REVIEW_SMTP_SERVER, self.MAIL_REVIEW_SMTP_PORT)  # SMTP协议默认端口是25
+        if self.SSL:
+            server = smtplib.SMTP_SSL(self.MAIL_REVIEW_SMTP_SERVER, self.MAIL_REVIEW_SMTP_PORT)  # SMTP协议默认SSL端口是465
+        else:
+            server = smtplib.SMTP(self.MAIL_REVIEW_SMTP_SERVER, self.MAIL_REVIEW_SMTP_PORT)  # SMTP协议默认端口是25
         # server.set_debuglevel(1)
 
         # 如果提供的密码为空，则不需要登录SMTP server
@@ -83,5 +89,8 @@ class MailSender(object):
 
     # 调用方应该调用此方法，采用子进程方式异步阻塞地发送邮件，避免邮件服务挂掉影响archer主服务
     def sendEmail(self, strTitle, strContent, listToAddr, **kwargs):
-        p = Process(target=self._send, args=(strTitle, strContent, listToAddr), kwargs=kwargs)
-        p.start()
+        try:
+            p = Process(target=self._send, args=(strTitle, strContent, listToAddr), kwargs=kwargs)
+            p.start()
+        except Exception:
+            logger.error(traceback.format_exc())
