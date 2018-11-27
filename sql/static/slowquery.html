@@ -323,8 +323,8 @@
                                 }
                             },
                         formatter: function (value, row, index) {
-                            if (value.length > 80) {
-                                var sql = value.substr(0, 808) + '...';
+                            if (value.length > 100) {
+                                var sql = value.substr(0, 100) + '...';
                                 return sql;
                             }
                             else {
@@ -345,6 +345,9 @@
                         field: 'ReturnTotalRowCounts'
                     }],
                     locale: 'zh-CN',
+                    onLoadError: function () {
+                        alert("数据加载失败！请检查接口返回信息和错误日志！");
+                    },
                     responseHandler: function (res) {
                         //在ajax获取到数据，渲染表格之前，修改数据源
                         return res;
@@ -435,8 +438,8 @@
                         title: 'SQL语句',
                         field: 'SQLText',
                         formatter: function (value, row, index) {
-                            if (value.length > 80) {
-                                var sql = value.substr(0, 80) + '...';
+                            if (value.length > 100) {
+                                var sql = value.substr(0, 100) + '...';
                                 return sql;
                             }
                             else {
@@ -444,21 +447,30 @@
                             }
                         }
                     }, {
-                        title: '执行时长(秒)',
+                        title: '执行总次数',
+                        field: 'TotalExecutionCounts'
+                    }, {
+                        title: '执行时长(95%)',
+                        field: 'QueryTimePct95'
+                    }, {
+                        title: '执行总时长(秒)',
                         field: 'QueryTimes'
                     }, {
-                        title: '锁定时长(秒)',
+                        title: '锁定总时长(秒)',
                         field: 'LockTimes'
                     }, {
-                        title: '解析行数',
+                        title: '解析总行数',
                         field: 'ParseRowCounts'
                     }, {
-                        title: '返回行数',
+                        title: '返回总行数',
                         field: 'ReturnRowCounts'
                     }],
                     singleSelect: true,
                     toolbar: "#sqladvisor-toolbar",               //指明自定义的toolbar
                     locale: 'zh-CN',
+                    onLoadError: function () {
+                        alert("数据加载失败！请检查接口返回信息和错误日志！");
+                    },
                     responseHandler: function (res) {
                         //在ajax获取到数据，渲染表格之前，修改数据源
                         return res;
