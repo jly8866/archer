@@ -60,8 +60,8 @@
 
 ## 采取docker部署
 * docker镜像，参考wiki
-    * inception镜像: https://dev.aliyun.com/detail.html?spm=5176.1972343.2.12.7b475aaaLiCfMf&repoId=142093
-    * archer镜像: https://dev.aliyun.com/detail.html?spm=5176.1972343.2.38.XtXtLh&repoId=142147  
+    * inception镜像: https://hub.docker.com/r/hhyo/archer
+    * archer镜像: https://hub.docker.com/r/hhyo/inception 
 * docker镜像制作感谢@小圈圈 提供
 
 ## 手动安装步骤
@@ -69,7 +69,7 @@
 - 克隆代码到本地或者下载zip包  
     `git clone https://github.com/jly8866/archer.git`   
 - 安装inception  
-[项目地址](http://mysql-inception.github.io/inception-document/install/)  
+[项目地址](https://github.com/hhyo/inception)  
 2. 安装python3，版本号>=3.4(由于需要修改官方模块，请使用virtualenv或venv等单独隔离环境！)
     ```
     pip3 install virtualenv
