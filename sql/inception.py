@@ -40,7 +40,7 @@ class InceptionDao(object):
                 result = ('', '', 2, '驳回高危SQL', '不能包含【DROP DATABASE】|【DROP TABLE】|【TRUNCATE PARTITION】|【TRUNCATE TABLE】关键字！', row, '', '', '', '', '')
                 criticalSqlFound = 1
             else:
-                result = ('', '', 0, '', 'None', row, '', '', '', '')
+                result = ('', '', 0, '', 'None', row, '', '', '', '', '')
             resultList.append(result)
         if criticalSqlFound == 1:
             return resultList
