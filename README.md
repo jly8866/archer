@@ -60,8 +60,8 @@
 
 ## 采取docker部署
 * docker镜像，参考wiki
-    * inception镜像: https://hub.docker.com/r/hhyo/archer
-    * archer镜像: https://hub.docker.com/r/hhyo/inception 
+    * inception镜像: https://hub.docker.com/r/hhyo/inception    
+    * archer镜像: https://hub.docker.com/r/hhyo/archer     
 * docker镜像制作感谢@小圈圈 提供
 
 ## 手动安装步骤

@@ -40,7 +40,7 @@ def slowquery_review(request):
     # 解决table数据丢失精度、格式化时间
     SQLSlowLog = json.loads(slowsql)['Items']['SQLSlowLog']
     for SlowLog in SQLSlowLog:
-        SlowLog['SQLId'] = str(SlowLog['SQLId'])
+        SlowLog['SQLId'] = str(SlowLog['SQLHASH'])
         SlowLog['CreateTime'] = aliyun.aliyun_time_format(SlowLog['CreateTime'])
 
     result = {"total": json.loads(slowsql)['TotalRecordCount'], "rows": SQLSlowLog,
@@ -64,7 +64,7 @@ def slowquery_review_history(request):
     values = {"PageSize": int(limit), "PageNumber": int(PageNumber)}
     # SQLId、DBName非必传
     if SQLId:
-        values['SQLId'] = SQLId
+        values['SQLHASH'] = SQLId
     if DBName:
         values['DBName'] = DBName
 
