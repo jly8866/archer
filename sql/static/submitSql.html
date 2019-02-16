@@ -76,8 +76,7 @@
                                 </div>
                                 <div id="collapseOne" class="panel-collapse
                             collapse">
-                                    <div class="panel-body" style="margin-left:
-                                25px">
+                                    <div class="panel-body" id="sub_review_man_panel_body" style="margin-left:25px">
                                         {% for man in reviewMen %}
                                             <div class="radio" id="{{ man }}">
                                                 <input type="radio" id="radio1"
@@ -306,6 +305,7 @@
 
         $("#review_man").change(function review_man() {
             var review_man = $(this).val();
+            $("div#sub_review_man_panel_body").children(".radio").show();
             $("div#" + review_man).hide();
         });
     </script>
