@@ -229,7 +229,7 @@ def simplecheck(request):
         result = inceptionDao.sqlautoReview(sqlContent, clusterName)
     except Exception as e:
         finalResult['status'] = 1
-        finalResult['msg'] = str(e)
+        finalResult['msg'] = 'Inception审核报错，请检查Inception配置，错误信息：\n{}'.format(str(e))
         return HttpResponse(json.dumps(finalResult), content_type='application/json')
 
     if result is None or len(result) == 0:
