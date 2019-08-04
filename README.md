@@ -278,5 +278,5 @@ inception无法连接备份库
 - 检查django-apscheduler相关表是否有创建，可使用`python3 manage.py migrate`创建  
 
 ## 联系方式
-QQ群1群524233225（已满）
-QQ群2群669833720
+* QQ群1群524233225（已满）
+* QQ群2群669833720
