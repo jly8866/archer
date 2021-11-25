@@ -1,6 +1,6 @@
 certifi==2017.7.27.1
 chardet==3.0.4
-Django==1.8.17
+Django==2.2.24
 idna==2.6
 Naked==0.1.31
 pycrypto==2.6.1
