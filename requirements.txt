@@ -6,7 +6,7 @@ Naked==0.1.31
 pycrypto==2.6.1
 PyMySQL==0.7.11
 PyYAML==5.4
-requests==2.20.0
+requests==2.31.0
 shellescape==3.4.1
 simplejson==3.14.0
 urllib3==1.26.5
